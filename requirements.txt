@@ -4,3 +4,5 @@ numpy
 pywin32
 Pillow
 opencv-python
+pygetwindow
+absl-py

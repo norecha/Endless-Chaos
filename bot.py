@@ -1,10 +1,23 @@
+from absl import app
+from absl import flags
 from re import X
+
+import win32con
+import coordinates
+
 from config import config
 import pyautogui
+import pygetwindow
+import win32gui
 import time
 import random
 import math
 import datetime
+
+FLAGS = flags.FLAGS
+flags.DEFINE_enum('mode', 'infinite_chaos', ['daily', 'infinite_chaos'], 'Mode')
+flags.DEFINE_integer('chars', 1, '# of chars for daily mode', lower_bound=1)
+flags.DEFINE_integer('starting_char', 0, 'starting char for daily mode', lower_bound=0)
 
 newStates = {
     "status": "inCity",
@@ -27,11 +40,56 @@ newStates = {
 states = newStates.copy()
 
 
-def main():
+def moveWindow():
+    print('Moving window')
+    windows = pygetwindow.getWindowsWithTitle('LOST ARK')
+    if not windows:
+        print('LOST ARK window is not found')
+        exit(1)
+    window = windows[0]
+    hWnd = window._hWnd
+    existing_style = win32gui.GetWindowLong(hWnd, win32con.GWL_STYLE)
+    # remove borders
+    new_style = existing_style & ~win32con.WS_CAPTION
+    win32gui.SetWindowLong(hWnd, win32con.GWL_STYLE, new_style)
+    win32gui.UpdateWindow(hWnd)
+    win32gui.MoveWindow(hWnd, 0, 0, 1920, 1080, 0)
+    window.activate()
+
+
+def press(button, wait=0):
+    pyautogui.press(button)
+    if wait > 0:
+        sleep(wait)
+
+
+def click(coordinate, wait=0):
+    pyautogui.moveTo(x=coordinate.x, y=coordinate.y)
+    sleep(100)
+    pyautogui.click()
+    if wait > 0:
+        sleep(wait)
+
+
+def daily(chars, starting_char=0):
+    for char in range(starting_char, chars):
+        # switch to char, assuming we start with char 0
+        if char > 0:
+            press('ESC', 1500)
+            click(coordinates.SWITCH_CHARACTERS, 1000)
+            click(coordinates.CHARACTERS[char], 1000)
+            click(coordinates.CONNECT, 1000)
+            click(coordinates.CONNECT_CONFIRM)
+            sleep(40000)
+
+def infinite_chaos(limit=None):
     print("Endless Chaos started...")
     # save bot start time
     states["botStartTime"] = int(time.time_ns() / 1000000)
     while True:
+        if states["clearCount"] >= limit:
+            print('Hit chaos limit')
+            return
         if states["status"] == "inCity":
             # states = newStates
             states["abilityScreenshots"] = []
@@ -473,7 +531,8 @@ def useAbilities():
         elif states["status"] == "floor3" and checkFloor2Elite():
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
             moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False)
-            pyautogui.press(config["awakening"])
+            if config["useAwakening"]:
+                pyautogui.press(config["awakening"])
 
         # cast sequence
         for i in range(0, len(states["abilityScreenshots"])):
@@ -559,9 +618,10 @@ def useAbilities():
 
 
 def checkCDandCast(ability):
+    now_ms = int(time.time_ns() / 1000000)
     if pyautogui.locateOnScreen(
         ability["image"], region=config["regions"]["abilities"]
-    ):
+    ) or (ability["esoteric"] and now_ms - ability["lastUsed"] > ability["cooldown"]):
         if ability["directional"] == True:
             pyautogui.moveTo(x=states["moveToX"], y=states["moveToY"])
         else:
@@ -593,10 +653,12 @@ def checkCDandCast(ability):
         else:
             # 瞬发 ability
             pyautogui.press(ability["key"])
-            while pyautogui.locateOnScreen(
+            while not ability["esoteric"] and pyautogui.locateOnScreen(
                 ability["image"], region=config["regions"]["abilities"]
             ):
                 pyautogui.press(ability["key"])
+        ability["lastUsed"] = now_ms
+        sleep(200, 320)
 
 
 def checkPortal():
@@ -1141,6 +1203,9 @@ def saveAbilitiesScreenshots():
                 "hold": ability["hold"],
                 "holdTime": ability["holdTime"],
                 "directional": ability["directional"],
+                "esoteric": ability.get("esoteric", False),
+                "cooldown": ability.get("cooldown", 0),
+                "lastUsed": 0,
             }
         )
 
@@ -1165,17 +1230,15 @@ def diedCheck():  # get information about wait a few second to revive
 
 def doRepair():
     # Check if repair needed
-    if pyautogui.locateOnScreen(
+    if states["deathCount"] % 5 == 0 or pyautogui.locateOnScreen(
         "./screenshots/repair.png",
         grayscale=True,
         confidence=0.5,
         region=(1500, 134, 100, 100),
     ):
-        pyautogui.keyDown("alt")
+        print('Repairing')
         sleep(800, 900)
-        pyautogui.press("p")
-        sleep(800, 900)
-        pyautogui.keyUp("alt")
+        pyautogui.press("f1")
         sleep(800, 900)
         pyautogui.moveTo(1182, 654)
         sleep(800, 900)
@@ -1214,7 +1277,9 @@ def healthCheck():
     return
 
 
-def sleep(min, max):
+def sleep(min, max=None):
+    if max == None:
+        max = int(min * 1.15)
     time.sleep(random.randint(min, max) / 1000.0)
 
 
@@ -1275,5 +1340,13 @@ def checkTimeout():
     return False
 
 
+def main(argv):
+    moveWindow()
+    if FLAGS.mode == 'infinite_chaos':
+        infinite_chaos()
+    elif FLAGS.mode == 'daily':
+        daily(FLAGS.chars, FLAGS.starting_char)
+
+
 if __name__ == "__main__":
-    main()
+    app.run(main)
