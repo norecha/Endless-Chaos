@@ -1,4 +1,5 @@
 import json
+from functools import cache
 
 from absl import app
 from absl import flags
@@ -61,7 +62,7 @@ def switch_to_char(char):
     utils.click(coordinates.CONNECT, 1000)
     utils.click(coordinates.CONNECT_CONFIRM)
     utils.sleep(30000)
-    utils.wait_for_loading()
+    utils.wait_loading_finish()
 
 
 def daily(chars, starting_char=0):
@@ -73,7 +74,8 @@ def daily(chars, starting_char=0):
         if char != starting_char:
             switch_to_char(char)
         infinite_chaos(char, limit=1)
-        utils.wait_for_loading()
+        utils.wait_loading_finish()
+    print(f'Done with dailies')
 
 
 def infinite_chaos(char, limit=None):
@@ -162,7 +164,7 @@ def enterChaos():
     sleep(200, 300)
 
     if config["shortcutEnterChaos"] == True:
-        utils.wait_for_loading()
+        utils.wait_loading_finish()
         sleep(600, 800)
         while True:
             pyautogui.keyDown("alt")
@@ -219,7 +221,8 @@ def enterChaos():
 
 def doFloor1():
     # trigger start floor 1
-    pyautogui.moveTo(x=845, y=600)
+    # pyautogui.moveTo(x=845, y=600)
+    pyautogui.moveTo(x=330, y=880)
     sleep(400, 500)
     pyautogui.click(button=config["move"])
 
@@ -667,19 +670,13 @@ def checkPortal():
     # if states["status"] == "floor2":
     #     return False
 
-    minimap = pyautogui.screenshot(region=config["regions"]["minimap"])  # Top Right
-    width, height = minimap.size
-    order = spiralSearch(width, height, math.floor(width / 2), math.floor(height / 2))
-    for entry in order:
-        if entry[1] >= width or entry[0] >= height:
-            continue
-        r, g, b = minimap.getpixel((entry[1], entry[0]))
+    for r, g, b, rel_x, rel_y in spiral_search():
         if (r in range(75, 85) and g in range(140, 150) and b in range(250, 255)) or (
             r in range(120, 130) and g in range(210, 220) and b in range(250, 255)
         ):
             left, top, _w, _h = config["regions"]["minimap"]
-            states["moveToX"] = left + entry[1]
-            states["moveToY"] = top + entry[0]
+            states["moveToX"] = left + rel_x
+            states["moveToY"] = top + rel_y
             print(
                 "portal pixel x: {} y: {}, r: {} g: {} b: {}".format(
                     states["moveToX"], states["moveToY"], r, g, b
@@ -1068,10 +1065,8 @@ def enterPortal():
             states["instanceStartTime"] = -1
             return
 
-        if (
-            states["moveToX"] == config["screenCenterX"]
-            and states["moveToY"] == config["screenCenterY"]
-        ):
+        if (states["moveToX"] == config["screenCenterX"] and
+                states["moveToY"] == config["screenCenterY"]):
             pyautogui.press(config["interact"])
             sleep(100, 120)
         else:
@@ -1240,6 +1235,16 @@ def sleep(min, max):
     time.sleep(random.randint(min, max) / 1000.0)
 
 
+def spiral_search():
+    minimap = pyautogui.screenshot(region=config["regions"]["minimap"])  # Top Right
+    width, height = minimap.size
+    coords = spiralSearch(width, height, math.floor(width / 2), math.floor(height / 2))
+    for coord in coords:
+        r, g, b = minimap.getpixel(coord)
+        yield r, g, b, coord[0], coord[1]
+
+
+@cache
 def spiralSearch(rows, cols, rStart, cStart):
     ans = []  # 可以通过长度来退出返回
     end = rows * cols  # 边界扩张
@@ -1250,28 +1255,28 @@ def spiralSearch(rows, cols, rStart, cStart):
         j2 += 1
         while j < j2:
             if 0 <= j < cols and 0 <= i:  # i刚减完
-                ans.append([i, j])
+                ans.append((i, j))
             j += 1
             if 0 > i:  # i超过了，跳过优化
                 j = j2  # 没有答案可添加
         i2 += 1
         while i < i2:
             if 0 <= i < rows and j < cols:
-                ans.append([i, j])
+                ans.append((i, j))
             i += 1
             if j >= cols:
                 i = i2
         j1 -= 1
         while j > j1:
             if 0 <= j < cols and i < rows:
-                ans.append([i, j])
+                ans.append((i, j))
             j -= 1
             if i >= rows:
                 j = j1
         i1 -= 1
         while i > i1:
             if 0 <= i < rows and 0 <= j:
-                ans.append([i, j])
+                ans.append((i, j))
             i -= 1
             if 0 > j:
                 i = i1

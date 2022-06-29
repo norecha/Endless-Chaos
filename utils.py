@@ -44,10 +44,11 @@ def sleep(minimum, maximum=None):
     time.sleep(random.randint(minimum, maximum) / 1000.0)
 
 
-def wait_for_loading():
+def wait_loading_finish():
     while True:
         im = pyautogui.screenshot(region=(1652, 168, 240, 210))
         r, g, b = im.getpixel((1772 - 1652, 272 - 168))
         if r != 0 and g != 0 and b != 0:
+            sleep(500, 800)
             break
         sleep(500, 800)
