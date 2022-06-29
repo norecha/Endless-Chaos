@@ -1,14 +1,15 @@
+import json
+
 from absl import app
 from absl import flags
 from re import X
 
-import win32con
 import coordinates
+import utils
+from ability import Ability
 
 from config import config
 import pyautogui
-import pygetwindow
-import win32gui
 import time
 import random
 import math
@@ -17,7 +18,7 @@ import datetime
 FLAGS = flags.FLAGS
 flags.DEFINE_enum('mode', 'infinite_chaos', ['daily', 'infinite_chaos'], 'Mode')
 flags.DEFINE_integer('chars', 1, '# of chars for daily mode', lower_bound=1)
-flags.DEFINE_integer('starting_char', 0, 'starting char for daily mode', lower_bound=0)
+flags.DEFINE_integer('starting_char', 0, 'starting char', lower_bound=0)
 
 newStates = {
     "status": "inCity",
@@ -40,50 +41,43 @@ newStates = {
 states = newStates.copy()
 
 
-def moveWindow():
-    print('Moving window')
-    windows = pygetwindow.getWindowsWithTitle('LOST ARK')
-    if not windows:
-        print('LOST ARK window is not found')
-        exit(1)
-    window = windows[0]
-    hWnd = window._hWnd
-    existing_style = win32gui.GetWindowLong(hWnd, win32con.GWL_STYLE)
-    # remove borders
-    new_style = existing_style & ~win32con.WS_CAPTION
-    win32gui.SetWindowLong(hWnd, win32con.GWL_STYLE, new_style)
-    win32gui.UpdateWindow(hWnd)
-    win32gui.MoveWindow(hWnd, 0, 0, 1920, 1080, 0)
-    window.activate()
+def load_abilities(char):
+    if len(states['abilityScreenshots']) > 4:
+        return
+    with open(f'character_configs/{char}.json') as f:
+        char_json = json.load(f)
+        for ability_config in char_json['abilities']:
+            if not ability_config['abilityType'] == 'normal':
+                continue
+            ability = Ability.load_from_config(ability_config)
+            states['abilityScreenshots'].append(ability)
 
 
-def press(button, wait=0):
-    pyautogui.press(button)
-    if wait > 0:
-        sleep(wait)
-
-
-def click(coordinate, wait=0):
-    pyautogui.moveTo(x=coordinate.x, y=coordinate.y)
-    sleep(100)
-    pyautogui.click()
-    if wait > 0:
-        sleep(wait)
+def switch_to_char(char):
+    print(f'Switching to {char=}')
+    utils.press('ESC', 1500)
+    utils.click(coordinates.SWITCH_CHARACTERS, 1000)
+    utils.click(coordinates.CHARACTERS[char], 1000)
+    utils.click(coordinates.CONNECT, 1000)
+    utils.click(coordinates.CONNECT_CONFIRM)
+    utils.sleep(30000)
+    utils.wait_for_loading()
 
 
 def daily(chars, starting_char=0):
-    for char in range(starting_char, chars):
-        # switch to char, assuming we start with char 0
-        if char > 0:
-            press('ESC', 1500)
-            click(coordinates.SWITCH_CHARACTERS, 1000)
-            click(coordinates.CHARACTERS[char], 1000)
-            click(coordinates.CONNECT, 1000)
-            click(coordinates.CONNECT_CONFIRM)
-            sleep(40000)
+    global states
+    for char in range(starting_char, starting_char + chars):
+        print(f'Starting daily for {char=}')
+        states = newStates.copy()
+        # switch to char
+        if char != starting_char:
+            switch_to_char(char)
+        infinite_chaos(char, limit=1)
+        utils.wait_for_loading()
 
-def infinite_chaos(limit=None):
-    print("Endless Chaos started...")
+
+def infinite_chaos(char, limit=None):
+    print(f"Endless Chaos started {char=} {limit=}...")
     # save bot start time
     states["botStartTime"] = int(time.time_ns() / 1000000)
     while True:
@@ -114,7 +108,7 @@ def infinite_chaos(limit=None):
             print("floor1 loaded")
 
             # saving clean abilities icons
-            saveAbilitiesScreenshots()
+            load_abilities(char)
 
             # check repair
             if config["autoRepair"]:
@@ -168,12 +162,7 @@ def enterChaos():
     sleep(200, 300)
 
     if config["shortcutEnterChaos"] == True:
-        while True:
-            im = pyautogui.screenshot(region=(1652, 168, 240, 210))
-            r, g, b = im.getpixel((1772 - 1652, 272 - 168))
-            if r != 0 and g != 0 and b != 0:
-                break
-            sleep(500, 800)
+        utils.wait_for_loading()
         sleep(600, 800)
         while True:
             pyautogui.keyDown("alt")
@@ -422,6 +411,7 @@ def quitChaos():
             pyautogui.click(button="left")
             break
         sleep(500, 600)
+    utils.sleep(1500)
     states["status"] = "inCity"
     states["clearCount"] = states["clearCount"] + 1
     printResult()
@@ -617,47 +607,47 @@ def useAbilities():
             randomMove()
 
 
-def checkCDandCast(ability):
+def checkCDandCast(ability: Ability):
     now_ms = int(time.time_ns() / 1000000)
     if pyautogui.locateOnScreen(
-        ability["image"], region=config["regions"]["abilities"]
-    ) or (ability["esoteric"] and now_ms - ability["lastUsed"] > ability["cooldown"]):
-        if ability["directional"] == True:
+        ability.image, region=config["regions"]["abilities"]
+    ) or (ability.esoteric and now_ms - ability.last_used > ability.cooldown):
+        if ability.directional:
             pyautogui.moveTo(x=states["moveToX"], y=states["moveToY"])
         else:
             pyautogui.moveTo(x=config["screenCenterX"], y=config["screenCenterY"])
 
-        if ability["cast"]:
+        if ability.cast:
             start_ms = int(time.time_ns() / 1000000)
             now_ms = int(time.time_ns() / 1000000)
             # spam until cast time before checking cd, to prevent 击倒后情况
-            while now_ms - start_ms < ability["castTime"]:
-                pyautogui.press(ability["key"])
+            while now_ms - start_ms < ability.cast_time:
+                pyautogui.press(ability.key)
                 now_ms = int(time.time_ns() / 1000000)
             # while pyautogui.locateOnScreen(
             #     ability["image"], region=config["regions"]["abilities"]
             # ):
             #     pyautogui.press(ability["key"])
-        elif ability["hold"]:
+        elif ability.hold:
             start_ms = int(time.time_ns() / 1000000)
             now_ms = int(time.time_ns() / 1000000)
-            pyautogui.keyDown(ability["key"])
-            while now_ms - start_ms < ability["holdTime"]:
-                pyautogui.keyDown(ability["key"])
+            pyautogui.keyDown(ability.key)
+            while now_ms - start_ms < ability.hold_time:
+                pyautogui.keyDown(ability.key)
                 now_ms = int(time.time_ns() / 1000000)
             # while pyautogui.locateOnScreen(
             #     ability["image"], region=config["regions"]["abilities"]
             # ):
             #     pyautogui.keyDown(ability["key"])
-            pyautogui.keyUp(ability["key"])
+            pyautogui.keyUp(ability.key)
         else:
             # 瞬发 ability
-            pyautogui.press(ability["key"])
-            while not ability["esoteric"] and pyautogui.locateOnScreen(
-                ability["image"], region=config["regions"]["abilities"]
+            pyautogui.press(ability.key)
+            while not ability.esoteric and pyautogui.locateOnScreen(
+                ability.image, region=config["regions"]["abilities"]
             ):
-                pyautogui.press(ability["key"])
-        ability["lastUsed"] = now_ms
+                pyautogui.press(ability.key)
+        ability.last_used = now_ms
         sleep(200, 320)
 
 
@@ -1179,37 +1169,6 @@ def waitForLoading():
             return
 
 
-def saveAbilitiesScreenshots():
-    if len(states["abilityScreenshots"]) > 4:
-        return
-    for ability in config["abilities"]:
-        if ability["abilityType"] == "awakening":
-            continue
-        if ability["abilityType"] == "specialty1":
-            continue
-        if ability["abilityType"] == "specialty2":
-            continue
-        left = ability["position"]["left"]
-        top = ability["position"]["top"]
-        width = ability["position"]["width"]
-        height = ability["position"]["height"]
-        im = pyautogui.screenshot(region=(left, top, width, height))
-        states["abilityScreenshots"].append(
-            {
-                "key": ability["key"],
-                "image": im,
-                "cast": ability["cast"],
-                "castTime": ability["castTime"],
-                "hold": ability["hold"],
-                "holdTime": ability["holdTime"],
-                "directional": ability["directional"],
-                "esoteric": ability.get("esoteric", False),
-                "cooldown": ability.get("cooldown", 0),
-                "lastUsed": 0,
-            }
-        )
-
-
 def diedCheck():  # get information about wait a few second to revive
     if pyautogui.locateOnScreen(
         "./screenshots/died.png", grayscale=True, confidence=0.9
@@ -1277,9 +1236,7 @@ def healthCheck():
     return
 
 
-def sleep(min, max=None):
-    if max == None:
-        max = int(min * 1.15)
+def sleep(min, max):
     time.sleep(random.randint(min, max) / 1000.0)
 
 
@@ -1340,10 +1297,10 @@ def checkTimeout():
     return False
 
 
-def main(argv):
-    moveWindow()
+def main(_argv):
+    utils.move_window()
     if FLAGS.mode == 'infinite_chaos':
-        infinite_chaos()
+        infinite_chaos(FLAGS.starting_char)
     elif FLAGS.mode == 'daily':
         daily(FLAGS.chars, FLAGS.starting_char)
 
