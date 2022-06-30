@@ -135,3 +135,5 @@ timeout/
 *.iml
 .idea
 
+# VSCode
+.vscode

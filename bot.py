@@ -46,7 +46,7 @@ def load_config(char: int) -> Dict:
         return json.load(f)
 
 
-def load_abilities(char_config: Dict) -> List[Ability] :
+def load_abilities(char_config: Dict) -> List[Ability]:
     abilities = []
     for ability_config in char_config['abilities']:
         if not ability_config['abilityType'] == 'normal':
