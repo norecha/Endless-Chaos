@@ -1,4 +1,5 @@
 {
+  "class": "Striker",
   "abilities": [
     {
       "key": "q",
@@ -58,7 +59,7 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "1",
@@ -67,15 +68,14 @@
       "holdTime": null,
       "cast": false,
       "castTime": null,
-      "esoteric": true,
-      "cooldown": 20000,
       "position": {
         "left": 759,
         "top": 907,
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true,
+      "image_path": "abilities/blast_formation.png"
     },
     {
       "key": "2",
@@ -90,7 +90,7 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "3",
@@ -114,15 +114,14 @@
       "holdTime": 3000,
       "cast": false,
       "castTime": null,
-      "esoteric": true,
-      "cooldown": 16000,
       "position": {
         "left": 873,
         "top": 907,
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": false,
+      "image_path": "abilities/call_the_wind.png"
     },
     {
       "key": "v",

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import pyautogui
+from PIL import Image
 
 
 @dataclass
@@ -34,11 +35,14 @@ class Ability:
 
     @staticmethod
     def load_from_config(ability_config):
-        left = ability_config['position']['left']
-        top = ability_config['position']['top']
-        width = ability_config['position']['width']
-        height = ability_config['position']['height']
-        image = pyautogui.screenshot(region=(left, top, width, height))
+        if 'image_path' in ability_config:
+            image = Image.open(ability_config['image_path'])
+        else:
+            left = ability_config['position']['left']
+            top = ability_config['position']['top']
+            width = ability_config['position']['width']
+            height = ability_config['position']['height']
+            image = pyautogui.screenshot(region=(left, top, width, height))
         return Ability(
             ability_type=ability_config['abilityType'],
             key=ability_config['key'],

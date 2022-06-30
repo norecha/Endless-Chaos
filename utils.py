@@ -6,6 +6,8 @@ import pygetwindow
 import win32con
 import win32gui
 
+from config import config
+
 
 def move_window():
     print('Moving window')
@@ -32,7 +34,7 @@ def press(button, wait=0):
 
 def click(coordinate, wait=0):
     pyautogui.moveTo(x=coordinate.x, y=coordinate.y)
-    sleep(100)
+    sleep(200)
     pyautogui.click()
     if wait > 0:
         sleep(wait)
@@ -52,3 +54,30 @@ def wait_loading_finish():
             sleep(500, 800)
             break
         sleep(500, 800)
+
+
+def wait_and_click_ok():
+    return _wait_and_click('./screenshots/ok.png', 0.75)
+
+
+def wait_and_click_leave():
+    return _wait_and_click(
+        './screenshots/leave.png', 0.7, True, config["regions"]["leaveMenu"])
+
+
+def _wait_and_click(button_path, confidence, grayscale=False, region=None):
+    while True:
+        button = pyautogui.locateCenterOnScreen(
+            button_path,
+            grayscale=grayscale,
+            confidence=confidence,
+            region=region,
+        )
+        if button is not None:
+            x, y = button
+            pyautogui.moveTo(x=x, y=y)
+            sleep(500, 600)
+            pyautogui.click()
+            sleep(150, 200)
+            break
+        sleep(500, 600)
