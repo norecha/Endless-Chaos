@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import json
 from functools import cache
 from typing import Dict, List, Optional
@@ -18,7 +19,7 @@ import math
 FLAGS = flags.FLAGS
 flags.DEFINE_enum('mode', 'infinite_chaos', ['daily', 'infinite_chaos'], 'Mode')
 flags.DEFINE_integer('chars', 1, '# of chars for daily mode', lower_bound=1)
-flags.DEFINE_integer('starting_char', 0, 'starting char', lower_bound=0)
+flags.DEFINE_integer('starting_char', 1, 'starting char', lower_bound=1)
 
 newStates = {
     "status": "inCity",
@@ -67,7 +68,7 @@ def switch_to_char(char):
     utils.wait_loading_finish()
 
 
-def daily(chars, starting_char=0):
+def daily(chars, starting_char):
     global states
     for char in range(starting_char, starting_char + chars):
         print(f'Starting daily for {char=}')
@@ -75,19 +76,19 @@ def daily(chars, starting_char=0):
         # switch to char
         if char != starting_char:
             switch_to_char(char)
-        infinite_chaos(char, limit=1)
+        infinite_chaos(char, limit=2)
         utils.wait_loading_finish()
     print(f'Done with dailies')
 
 
-def infinite_chaos(char, limit=None):
+def infinite_chaos(char, limit: Optional[int] = None):
     print(f"Endless Chaos started {char=} {limit=}...")
     char_config = load_config(char)
     # save bot start time
     states["botStartTime"] = int(time.time_ns() / 1000000)
     abilities = None
     while True:
-        if states["clearCount"] >= limit:
+        if limit and states["clearCount"] >= limit:
             print('Hit chaos limit')
             return
         if states["status"] == "inCity":
@@ -118,8 +119,7 @@ def infinite_chaos(char, limit=None):
                 abilities = load_abilities(char_config)
 
             # check repair
-            if config["autoRepair"]:
-                doRepair()
+            doRepair()
 
             if char_config['class'] == 'Berserker':
                 utils.press(config['specialty1'])
@@ -290,6 +290,7 @@ def doFloor2(abilities: List[Ability]):
 
 
 def doFloor3Portal(abilities: List[Ability]):
+    print('Identifying floor 3 portal')
     bossBar = None
     goldMob = False
     normalMob = False
@@ -347,7 +348,7 @@ def doFloor3(abilities: List[Ability], limit: Optional[int] = None):
         quitChaos()
         return
 
-    useAbilities(abilities)
+    useAbilities(abilities, check_portal=False)
 
     # bad run quit
     if checkTimeout():
@@ -399,11 +400,11 @@ def quitChaos():
     return
 
 
-def restartChaos(limit=None):
+def restartChaos(limit: Optional[int] = None):
     states["fullClearCount"] = states["fullClearCount"] + 1
     states["clearCount"] = states["clearCount"] + 1
     printResult()
-    if states["clearCount"] >= limit:
+    if limit and states["clearCount"] >= limit:
         quitChaos()
         return
 
@@ -488,7 +489,26 @@ def printResult():
     )
 
 
-def useAbilities(abilities: List[Ability]):
+@dataclass
+class SpiralResult:
+    found: bool
+    r: int = 0
+    g: int = 0
+    b: int = 0
+    rel_x: int = 0
+    rel_y: int = 0
+
+
+def check_spiral_predicates(predicates) -> List[SpiralResult]:
+    result = [SpiralResult(False) for _ in predicates]
+    for r, g, b, rel_x, rel_y in spiral_search():
+        for i, predicate in enumerate(predicates):
+            if not result[i].found and predicate(r, g, b):
+                result[i] = SpiralResult(True, r, g, b, rel_x, rel_y)
+    return result
+
+
+def useAbilities(abilities: List[Ability], check_portal: Optional[bool] = True):
     while True:
         diedCheck()
         healthCheck()
@@ -496,12 +516,17 @@ def useAbilities(abilities: List[Ability]):
             return
 
         # check elite and mobs
-        if states["status"] == "floor2" and checkFloor2Elite():
+        if states["status"] == "floor1" and check_red_mob():
+            calculateMinimapRelative(states["moveToX"], states["moveToY"])
+            moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False)
+        elif states["status"] == "floor2" and checkFloor2Elite():
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
             moveToMinimapRelative(states["moveToX"], states["moveToY"], 750, 850, False)
         elif states["status"] == "floor2" and check_red_mob():
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
             moveToMinimapRelative(states["moveToX"], states["moveToY"], 400, 500, False)
+        elif states["status"] == "floor3" and checkChaosFinish():
+            return
         elif states["status"] == "floor3" and checkFloor2Elite():
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
             moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False)
@@ -510,32 +535,12 @@ def useAbilities(abilities: List[Ability]):
                 pyautogui.press(config["awakening"])
 
         # cast sequence
-        for ability in abilities:
-            if states["status"] == "floor3" and checkChaosFinish():
-                return
+        for ability_index, ability in enumerate(abilities):
             diedCheck()
             healthCheck()
 
             # check portal
-            if states["status"] == "floor3" and checkPortal():
-                pyautogui.click(
-                    x=config["screenCenterX"],
-                    y=config["screenCenterY"],
-                    button=config["move"],
-                )
-                sleep(100, 150)
-                checkPortal()
-                return
-            elif states["status"] == "floor2" and checkPortal():
-                pyautogui.click(
-                    x=config["screenCenterX"],
-                    y=config["screenCenterY"],
-                    button=config["move"],
-                )
-                sleep(100, 150)
-                checkPortal()
-                return
-            elif states["status"] == "floor1" and checkPortal():
+            if check_portal and ability_index % 2 == 0 and states["status"] in ("floor1", "floor2", "floor3") and checkPortal():
                 pyautogui.click(
                     x=config["screenCenterX"],
                     y=config["screenCenterY"],
@@ -556,33 +561,54 @@ def useAbilities(abilities: List[Ability]):
                     states["moveToX"], states["moveToY"], 950, 1050, True
                 )
                 fightFloor2Boss()
-            elif states["status"] == "floor3" and checkFloor3GoldMob():
-                calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                moveToMinimapRelative(
-                    states["moveToX"], states["moveToY"], 500, 600, False
-                )
-            elif states["status"] == "floor3" and checkFloor3Tower():
-                if not checkFloor2Elite() and not check_red_mob():
-                    randomMove()
-                    checkFloor3Tower()
-                calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                moveToMinimapRelative(
-                    states["moveToX"], states["moveToY"], 1200, 1300, True
-                )
-                # pyautogui.press("x")
-                sleep(200, 220)
-                clickTower()
-            elif states["status"] == "floor3" and check_red_mob():
-                calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                moveToMinimapRelative(
-                    states["moveToX"], states["moveToY"], 200, 300, False
-                )
-                # pyautogui.press(config["awakening"])
-            elif states["status"] == "floor3" and checkFloor2Boss():
-                calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                moveToMinimapRelative(
-                    states["moveToX"], states["moveToY"], 800, 900, True
-                )
+            # floor3 checks take long time, don't do it after every ability
+            elif states["status"] == "floor3" and ability_index % 3 == 0:
+                # check all pixels in one spiral
+                gold, red, tower, elite = check_spiral_predicates(
+                    [is_gold_mob, is_red_mob, is_tower_pixel, is_elite_mob])
+                if gold.found:
+                    left, top, _w, _h = config["regions"]["minimap"]
+                    states["moveToX"] = left + gold.rel_x
+                    states["moveToY"] = top + gold.rel_y
+                    print(
+                        "gold x: {} y: {}, r: {} g: {} b: {}".format(
+                            states["moveToX"], states["moveToY"], gold.r, gold.g, gold.b
+                        )
+                    )
+                    calculateMinimapRelative(states["moveToX"], states["moveToY"])
+                    moveToMinimapRelative(
+                        states["moveToX"], states["moveToY"], 500, 600, False
+                    )
+                elif checkFloor3Tower(tower):
+                    if not elite.found and not red.found:
+                        randomMove()
+                        tower, = check_spiral_predicates([is_tower_pixel])
+                        checkFloor3Tower(tower)
+                    calculateMinimapRelative(states["moveToX"], states["moveToY"])
+                    moveToMinimapRelative(
+                        states["moveToX"], states["moveToY"], 1200, 1300, True
+                    )
+                    # pyautogui.press("x")
+                    sleep(200, 220)
+                    clickTower()
+                elif red.found:
+                    left, top, _w, _h = config["regions"]["minimap"]
+                    states["moveToX"] = left + red.rel_x
+                    states["moveToY"] = top + red.rel_y
+                    print(
+                        "red mob x: {} y: {}, r: {} g: {} b: {}".format(
+                            states["moveToX"], states["moveToY"], red.r, red.g, red.b
+                        )
+                    )
+                    calculateMinimapRelative(states["moveToX"], states["moveToY"])
+                    moveToMinimapRelative(
+                        states["moveToX"], states["moveToY"], 200, 300, False
+                    )
+                elif checkFloor2Boss():
+                    calculateMinimapRelative(states["moveToX"], states["moveToY"])
+                    moveToMinimapRelative(
+                        states["moveToX"], states["moveToY"], 800, 900, True
+                    )
 
             # cast spells
             checkCDandCast(ability)
@@ -632,8 +658,6 @@ def checkCDandCast(ability: Ability):
                 ability.image, region=config["regions"]["abilities"]
             ):
                 pyautogui.press(ability.key)
-        ability.last_used = now_ms
-        sleep(200, 320)
 
 
 def checkPortal():
@@ -653,8 +677,8 @@ def checkPortal():
     #     return False
 
     for r, g, b, rel_x, rel_y in spiral_search():
-        if (r in range(75, 85) and g in range(140, 150) and b in range(250, 255)) or (
-            r in range(120, 130) and g in range(210, 220) and b in range(250, 255)
+        if (r in range(75, 86) and g in range(140, 151) and b in range(250, 256)) or (
+            r in range(120, 131) and g in range(210, 221) and b in range(250, 256)
         ):
             left, top, _w, _h = config["regions"]["minimap"]
             states["moveToX"] = left + rel_x
@@ -668,9 +692,13 @@ def checkPortal():
     return False
 
 
+def is_elite_mob(r, g, b):
+    return r in range(200, 216) and g in range(125, 151) and b in range(30, 61)
+
+
 def checkFloor2Elite():
     for r, g, b, rel_x, rel_y in spiral_search():
-        if (r in range(200, 215)) and (g in range(125, 150)) and (b in range(30, 60)):
+        if is_elite_mob(r, g, b):
             left, top, _w, _h = config["regions"]["minimap"]
             states["moveToX"] = left + rel_x
             states["moveToY"] = top + rel_y
@@ -683,9 +711,13 @@ def checkFloor2Elite():
     return False
 
 
+def is_red_mob(r, g, b):
+    return r in range(200, 256) and g in range(10, 41) and b in range(10, 41)
+
+
 def check_red_mob() -> bool:
     for r, g, b, rel_x, rel_y in spiral_search():
-        if (r in range(200, 255)) and (g in range(10, 40)) and (b in range(10, 40)):
+        if is_red_mob(r, g, b):
             left, top, _w, _h = config["regions"]["minimap"]
             states["moveToX"] = left + rel_x
             states["moveToY"] = top + rel_y
@@ -698,9 +730,13 @@ def check_red_mob() -> bool:
     return False
 
 
+def is_gold_mob(r, g, b):
+    return r in range(240, 256) and g in range(180, 201) and b in range(0, 41)
+
+
 def checkFloor3GoldMob():
     for r, g, b, rel_x, rel_y in spiral_search():
-        if r == 255 and g == 188 and b == 30:
+        if is_gold_mob(r, g, b):
             left, top, _w, _h = config["regions"]["minimap"]
             states["moveToX"] = left + rel_x
             states["moveToY"] = top + rel_y
@@ -785,7 +821,13 @@ def clickTower():
         pyautogui.press(config["meleeAttack"])
 
 
-def checkFloor3Tower():
+def is_tower_pixel(r, g, b):
+    return ((r in range(240, 245) and r in range(60, 65) and r in range(65, 70)) or
+            (r in range(160, 165) and g in range(160, 165) and b in range(160, 165)) or
+            (r in range(125, 130) and g in range(95, 100) and b in range(100, 105)))
+
+
+def checkFloor3Tower(tower_result: SpiralResult):
     tower = pyautogui.locateCenterOnScreen(
         "./screenshots/tower.png", region=config["regions"]["minimap"], confidence=0.7
     )
@@ -796,26 +838,21 @@ def checkFloor3Tower():
         print("tower image x: {} y: {}".format(states["moveToX"], states["moveToY"]))
         return True
 
-    for r, g, b, rel_x, rel_y in spiral_search():
-        if (
-            (r == 242 and g == 63 and b == 68)
-            or (r == 162 and g == 162 and b == 162)
-            or (r == 126 and g == 97 and b == 103)
-        ):
-            left, top, _w, _h = config["regions"]["minimap"]
-            states["moveToX"] = left + rel_x
-            states["moveToY"] = top + rel_y
-            # pos offset
-            if r == 126 and g == 97 and b == 103:
-                states["moveToY"] = states["moveToY"] + 7
-            elif r == 162 and g == 162 and b == 162:
-                states["moveToY"] = states["moveToY"] - 13
-            print(
-                "tower pixel pos x: {} y: {}, r: {} g: {} b: {}".format(
-                    states["moveToX"], states["moveToY"], r, g, b
-                )
+    if tower_result.found:
+        left, top, _w, _h = config["regions"]["minimap"]
+        states["moveToX"] = left + tower_result.rel_x
+        states["moveToY"] = top + tower_result.rel_y
+        # pos offset
+        if tower_result.r in range(125, 130) and tower_result.g in range(95, 100) and tower_result.b in range(100, 105):
+            states["moveToY"] = states["moveToY"] + 7
+        elif tower_result.r in range(160, 165) and tower_result.g in range(160, 165) and tower_result.b in range(160, 165):
+            states["moveToY"] = states["moveToY"] - 13
+        print(
+            "tower pixel pos x: {} y: {}, r: {} g: {} b: {}".format(
+                states["moveToX"], states["moveToY"], tower_result.r, tower_result.g, tower_result.b
             )
-            return True
+        )
+        return True
 
     return False
 
@@ -885,31 +922,21 @@ def calculateMinimapRelative(x, y):
     newX = (newY - y) / k + x
 
     # print("before confining newX: {} newY: {}".format(int(newX), int(newY)))
-    if newX < 0 and abs(newX) > config["clickableAreaX"]:
-        newX = -config["clickableAreaX"]
+    if abs(newX) > config["clickableAreaX"]:
+        delta = (abs(newX) > config["clickableAreaX"]) * k
+        newX = -config["clickableAreaX"] if newX < 0 else config["clickableAreaX"]
         if newY < 0:
-            newY = newY + abs(dist) * 0.25
+            newY = newY + delta
         else:
-            newY = newY - abs(dist) * 0.25
-    elif newX > 0 and abs(newX) > config["clickableAreaX"]:
-        newX = config["clickableAreaX"]
-        if newY < 0:
-            newY = newY + abs(dist) * 0.25
-        else:
-            newY = newY - abs(dist) * 0.25
+            newY = newY - delta
 
-    if newY < 0 and abs(newY) > config["clickableAreaY"]:
-        newY = -config["clickableAreaY"]
+    if abs(newY) > config["clickableAreaY"]:
+        delta = (abs(newY) - config["clickableAreaY"]) / k
+        newY = -config["clickableAreaY"] if newY < 0 else config["clickableAreaY"]
         if newX < 0:
-            newX = newX + abs(dist) * 0.7
+            newX = newX + delta
         else:
-            newX = newX - abs(dist) * 0.7
-    elif newY > 0 and abs(newY) > config["clickableAreaY"]:
-        newY = config["clickableAreaY"]
-        if newX < 0:
-            newX = newX + abs(dist) * 0.7
-        else:
-            newX = newX - abs(dist) * 0.7
+            newX = newX - delta
 
     # print(
     #     "after confining relative to center pos newX: {} newY: {}".format(
@@ -1023,10 +1050,11 @@ def enterPortal():
             # FIXME:
             states["instanceStartTime"] = -1
             return
-        if nowTime - portal_try > 6000:
+        if nowTime - portal_try > 4500:
             print('Trying to find portal again')
             checkPortal()
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
+            print("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
             portal_try = nowTime
 
         if (states["moveToX"] == config["screenCenterX"] and
@@ -1147,8 +1175,11 @@ def diedCheck():  # get information about wait a few second to revive
 
 
 def doRepair():
+    if not config["autoRepair"]:
+        return
+
     # Check if repair needed
-    if states["deathCount"] % 5 == 0 or pyautogui.locateOnScreen(
+    if states["deathCount"] % 4 == 1 or states["clearCount"] % 4 == 1 or pyautogui.locateOnScreen(
         "./screenshots/repair.png",
         grayscale=True,
         confidence=0.5,

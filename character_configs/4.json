@@ -1,5 +1,5 @@
 {
-  "class": "Paladin",
+  "class": "Gunslinger",
   "abilities": [
     {
       "key": "q",
@@ -14,13 +14,13 @@
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "e",
       "abilityType": "normal",
-      "hold": false,
-      "holdTime": null,
+      "hold": true,
+      "holdTime": 2000,
       "cast": false,
       "castTime": null,
       "position": {
@@ -37,29 +37,29 @@
       "hold": false,
       "holdTime": null,
       "cast": true,
-      "castTime": 1500,
+      "castTime": 2000,
       "position": {
         "left": 816,
         "top": 869,
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "r",
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": true,
-      "castTime": 1500,
+      "cast": false,
+      "castTime": null,
       "position": {
         "left": 855,
         "top": 869,
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "1",
@@ -89,13 +89,13 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "3",
       "abilityType": "normal",
-      "hold": false,
-      "holdTime": null,
+      "hold": true,
+      "holdTime": 3000,
       "cast": false,
       "castTime": null,
       "position": {
@@ -134,7 +134,7 @@
         "width": 19,
         "height": 11
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "z",

@@ -1,5 +1,5 @@
 {
-  "class": "Gunslinger",
+  "class": "Berserker",
   "abilities": [
     {
       "key": "q",
@@ -14,13 +14,13 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "e",
       "abilityType": "normal",
       "hold": true,
-      "holdTime": 2000,
+      "holdTime": 3000,
       "cast": false,
       "castTime": null,
       "position": {
@@ -29,28 +29,28 @@
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "f",
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": true,
-      "castTime": 2000,
+      "cast": false,
+      "castTime": null,
       "position": {
         "left": 816,
         "top": 869,
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "r",
       "abilityType": "normal",
-      "hold": false,
-      "holdTime": null,
+      "hold": true,
+      "holdTime": 1000,
       "cast": false,
       "castTime": null,
       "position": {
@@ -66,8 +66,8 @@
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": true,
-      "castTime": 1500,
+      "cast": false,
+      "castTime": null,
       "position": {
         "left": 759,
         "top": 907,
@@ -89,15 +89,15 @@
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "3",
       "abilityType": "normal",
-      "hold": true,
-      "holdTime": 3000,
-      "cast": false,
-      "castTime": null,
+      "hold": false,
+      "holdTime": null,
+      "cast": true,
+      "castTime": 1500,
       "position": {
         "left": 835,
         "top": 907,

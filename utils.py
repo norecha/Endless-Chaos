@@ -54,6 +54,7 @@ def wait_loading_finish():
             sleep(500, 800)
             break
         sleep(500, 800)
+    sleep(1000)
 
 
 def wait_and_click_ok():

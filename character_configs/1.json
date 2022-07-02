@@ -1,5 +1,5 @@
 {
-  "class": "Sorceress",
+  "class": "Striker",
   "abilities": [
     {
       "key": "q",
@@ -51,15 +51,15 @@
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": false,
-      "castTime": null,
+      "cast": true,
+      "castTime": 500,
       "position": {
         "left": 855,
         "top": 869,
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "1",
@@ -74,7 +74,8 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true,
+      "image_path": "abilities/blast_formation.png"
     },
     {
       "key": "2",
@@ -89,7 +90,7 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "3",
@@ -109,17 +110,18 @@
     {
       "key": "4",
       "abilityType": "normal",
-      "hold": false,
-      "holdTime": null,
-      "cast": true,
-      "castTime": 2000,
+      "hold": true,
+      "holdTime": 3000,
+      "cast": false,
+      "castTime": null,
       "position": {
         "left": 873,
         "top": 907,
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": false,
+      "image_path": "abilities/call_the_wind.png"
     },
     {
       "key": "v",

@@ -1,5 +1,5 @@
 {
-  "class": "Berserker",
+  "class": "Sorceress",
   "abilities": [
     {
       "key": "q",
@@ -14,13 +14,13 @@
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "e",
       "abilityType": "normal",
-      "hold": true,
-      "holdTime": 3000,
+      "hold": false,
+      "holdTime": null,
       "cast": false,
       "castTime": null,
       "position": {
@@ -49,8 +49,8 @@
     {
       "key": "r",
       "abilityType": "normal",
-      "hold": true,
-      "holdTime": 1000,
+      "hold": false,
+      "holdTime": null,
       "cast": false,
       "castTime": null,
       "position": {
@@ -96,8 +96,8 @@
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": true,
-      "castTime": 1500,
+      "cast": false,
+      "castTime": null,
       "position": {
         "left": 835,
         "top": 907,
@@ -111,8 +111,8 @@
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": false,
-      "castTime": null,
+      "cast": true,
+      "castTime": 2000,
       "position": {
         "left": 873,
         "top": 907,

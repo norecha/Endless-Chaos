@@ -1,5 +1,5 @@
 {
-  "class": "Striker",
+  "class": "Paladin",
   "abilities": [
     {
       "key": "q",
@@ -14,7 +14,7 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "e",
@@ -29,15 +29,15 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "f",
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": false,
-      "castTime": null,
+      "cast": true,
+      "castTime": 1500,
       "position": {
         "left": 816,
         "top": 869,
@@ -52,7 +52,7 @@
       "hold": false,
       "holdTime": null,
       "cast": true,
-      "castTime": 1900,
+      "castTime": 1500,
       "position": {
         "left": 855,
         "top": 869,
@@ -66,16 +66,15 @@
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": false,
-      "castTime": null,
+      "cast": true,
+      "castTime": 1500,
       "position": {
         "left": 759,
         "top": 907,
         "width": 15,
         "height": 15
       },
-      "directional": true,
-      "image_path": "abilities/blast_formation.png"
+      "directional": false
     },
     {
       "key": "2",
@@ -90,7 +89,7 @@
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "3",
@@ -110,8 +109,8 @@
     {
       "key": "4",
       "abilityType": "normal",
-      "hold": true,
-      "holdTime": 3000,
+      "hold": false,
+      "holdTime": null,
       "cast": false,
       "castTime": null,
       "position": {
@@ -120,8 +119,7 @@
         "width": 15,
         "height": 15
       },
-      "directional": false,
-      "image_path": "abilities/call_the_wind.png"
+      "directional": false
     },
     {
       "key": "v",
@@ -136,7 +134,7 @@
         "width": 19,
         "height": 11
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "z",
