@@ -142,3 +142,11 @@ def sleep(minimum, maximum=None):
     if maximum is None:
         maximum = int(minimum * 1.15)
     time.sleep(random.randint(minimum, maximum) / 1000.0)
+
+
+def key_down(*args, **kwargs):
+    pyautogui.keyDown(*args, **kwargs)
+
+
+def key_up(*args, **kwargs):
+    pyautogui.keyUp(*args, **kwargs)

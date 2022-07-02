@@ -11,7 +11,6 @@ import utils
 from ability import Ability
 
 from config import config
-import pyautogui
 import time
 import random
 import math
@@ -176,11 +175,11 @@ def enterChaos():
         client_util.wait_loading_finish()
         sleep(600, 800)
         while True:
-            pyautogui.keyDown("alt")
+            utils.key_down("alt")
             sleep(600, 800)
             utils.press("q")
             sleep(300, 400)
-            pyautogui.keyUp("alt")
+            utils.key_up("alt")
             sleep(300, 400)
             client_util.move_to(886, 346)
             sleep(600, 800)
@@ -642,15 +641,15 @@ def checkCDandCast(ability: Ability):
         elif ability.hold:
             start_ms = int(time.time_ns() / 1000000)
             now_ms = int(time.time_ns() / 1000000)
-            pyautogui.keyDown(ability.key)
+            utils.key_down(ability.key)
             while now_ms - start_ms < ability.hold_time:
-                pyautogui.keyDown(ability.key)
+                utils.key_down(ability.key)
                 now_ms = int(time.time_ns() / 1000000)
             # while mouse_util.locate_on_screen(
             #     ability["image"], region=config["regions"]["abilities"]
             # ):
-            #     pyautogui.keyDown(ability["key"])
-            pyautogui.keyUp(ability.key)
+            #     utils.key_down(ability["key"])
+            utils.key_up(ability.key)
         else:
             # 瞬发 ability
             utils.press(ability.key)
