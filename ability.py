@@ -4,6 +4,8 @@ from typing import Any, Optional
 import pyautogui
 from PIL import Image
 
+import utils
+
 
 @dataclass
 class Ability:
@@ -34,7 +36,7 @@ class Ability:
         self.last_used = last_used
 
     @staticmethod
-    def load_from_config(ability_config):
+    def load_from_config(ability_config, client_util: utils.ClientUtil):
         if 'image_path' in ability_config:
             image = Image.open(ability_config['image_path'])
         else:
@@ -42,7 +44,7 @@ class Ability:
             top = ability_config['position']['top']
             width = ability_config['position']['width']
             height = ability_config['position']['height']
-            image = pyautogui.screenshot(region=(left, top, width, height))
+            image = client_util.screenshot(region=(left, top, width, height))
         return Ability(
             ability_type=ability_config['abilityType'],
             key=ability_config['key'],
