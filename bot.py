@@ -122,11 +122,8 @@ def infinite_chaos(char, limit: Optional[int] = None):
             # check repair
             doRepair()
 
-            if char_config['class'] == 'Berserker':
-                utils.press(config['specialty1'])
-
             # do floor one
-            doFloor1(abilities)
+            doFloor1(abilities, char_config)
         elif states["status"] == "floor2":
             print("floor2")
             client_util.move_to(x=config["screenCenterX"], y=config["screenCenterY"])
@@ -138,7 +135,7 @@ def infinite_chaos(char, limit: Optional[int] = None):
                 continue
             print("floor2 loaded")
             # do floor two
-            doFloor2(abilities)
+            doFloor2(abilities, char_config)
         elif states["status"] == "floor3":
             print("floor3")
             client_util.move_to(x=config["screenCenterX"], y=config["screenCenterY"])
@@ -155,11 +152,11 @@ def infinite_chaos(char, limit: Optional[int] = None):
             sleep(100, 120)
             client_util.click(button=config["move"])
             sleep(500, 600)
-            doFloor3Portal(abilities)
+            doFloor3Portal(abilities, char_config)
             if checkTimeout() or config["floor3"] == False:
                 quitChaos()
                 continue
-            doFloor3(abilities, limit)
+            doFloor3(abilities, char_config, limit)
 
 
 def enterChaos():
@@ -228,7 +225,7 @@ def enterChaos():
     return
 
 
-def doFloor1(abilities: List[Ability]):
+def doFloor1(abilities: List[Ability], char_config: Dict):
     # trigger start floor 1
     # mouse_util.move_to(x=845, y=600)
     client_util.move_to(x=530, y=680)
@@ -248,7 +245,7 @@ def doFloor1(abilities: List[Ability]):
     # mouse_util.click(x=960, y=530, button=config['move'])
 
     # smash available abilities
-    useAbilities(abilities)
+    useAbilities(abilities, char_config)
 
     # bad run quit
     if checkTimeout():
@@ -265,14 +262,14 @@ def doFloor1(abilities: List[Ability]):
     return
 
 
-def doFloor2(abilities: List[Ability]):
+def doFloor2(abilities: List[Ability], char_config: Dict):
     client_util.mouse_down(x=1150, y=500, button=config["move"])
     sleep(800, 900)
     client_util.mouse_down(x=960, y=200, button=config["move"])
     sleep(800, 900)
     client_util.click(x=945, y=550, button=config["move"])
 
-    useAbilities(abilities)
+    useAbilities(abilities, char_config)
 
     # bad run quit
     if checkTimeout():
@@ -290,7 +287,7 @@ def doFloor2(abilities: List[Ability]):
     return
 
 
-def doFloor3Portal(abilities: List[Ability]):
+def doFloor3Portal(abilities: List[Ability], char_config: Dict):
     print('Identifying floor 3 portal')
     bossBar = None
     goldMob = False
@@ -312,7 +309,7 @@ def doFloor3Portal(abilities: List[Ability]):
         print("purple boss bar located")
         states["purplePortalCount"] = states["purplePortalCount"] + 1
         utils.press(config["awakening"])
-        useAbilities(abilities)
+        useAbilities(abilities, char_config)
         print("special portal cleared")
         calculateMinimapRelative(states["moveToX"], states["moveToY"])
         if config["floor3"] == False:
@@ -324,7 +321,7 @@ def doFloor3Portal(abilities: List[Ability]):
     elif goldMob == True:
         print("gold mob located")
         states["goldPortalCount"] = states["goldPortalCount"] + 1
-        useAbilities(abilities)
+        useAbilities(abilities, char_config)
         print("special portal cleared")
         calculateMinimapRelative(states["moveToX"], states["moveToY"])
         if config["floor3"] == False:
@@ -341,7 +338,7 @@ def doFloor3Portal(abilities: List[Ability]):
         return
 
 
-def doFloor3(abilities: List[Ability], limit: Optional[int] = None):
+def doFloor3(abilities: List[Ability], char_config: Dict, limit: Optional[int] = None):
     waitForLoading()
     print("real floor 3 loaded")
 
@@ -349,7 +346,7 @@ def doFloor3(abilities: List[Ability], limit: Optional[int] = None):
         quitChaos()
         return
 
-    useAbilities(abilities, check_portal=False)
+    useAbilities(abilities, char_config, check_portal=False)
 
     # bad run quit
     if checkTimeout():
@@ -508,10 +505,12 @@ def check_spiral_predicates(predicates) -> List[SpiralResult]:
     return result
 
 
-def useAbilities(abilities: List[Ability], check_portal: Optional[bool] = True):
+def useAbilities(abilities: List[Ability],
+                 char_config: Dict,
+                 check_portal: Optional[bool] = True):
     while True:
-        diedCheck()
-        healthCheck()
+        diedCheck(char_config)
+        healthCheck(char_config)
         if checkTimeout():
             return
 
@@ -536,8 +535,8 @@ def useAbilities(abilities: List[Ability], check_portal: Optional[bool] = True):
 
         # cast sequence
         for ability_index, ability in enumerate(abilities):
-            diedCheck()
-            healthCheck()
+            diedCheck(char_config)
+            healthCheck(char_config)
 
             # check portal
             if check_portal and ability_index % 2 == 0 and states["status"] in ("floor1", "floor2", "floor3") and checkPortal():
@@ -619,7 +618,6 @@ def useAbilities(abilities: List[Ability], check_portal: Optional[bool] = True):
 
 
 def checkCDandCast(ability: Ability):
-    now_ms = int(time.time_ns() / 1000000)
     if client_util.locate_on_screen(
         ability.image, region=config["regions"]["abilities"]
     ):
@@ -1156,16 +1154,13 @@ def waitForLoading():
             return
 
 
-def diedCheck():  # get information about wait a few second to revive
+def diedCheck(char_config: Dict):  # get information about wait a few second to revive
     if client_util.locate_on_screen(
         "./screenshots/died.png", grayscale=True, confidence=0.9
     ):
         states["deathCount"] = states["deathCount"] + 1
         sleep(5000, 5500)
-        while (
-                client_util.locate_on_screen("./screenshots/resReady.png", confidence=0.7)
-                != None
-        ):
+        while client_util.locate_on_screen("./screenshots/resReady.png", confidence=0.7) != None:
             client_util.move_to(1275, 454)
             sleep(600, 800)
             client_util.click(1275, 454, button="left")
@@ -1203,10 +1198,18 @@ def doRepair():
         sleep(800, 900)
 
 
-def healthCheck():
+def is_berserker(char_config: Dict):
+    return char_config['class'] == 'Berserker'
+
+
+def healthCheck(char_config: Dict):
+    if is_berserker(char_config):
+        percent_check = 0.15
+    else:
+        percent_check = config["healthPotAtPercent"]
     x = int(
         config["healthCheckX"]
-        + (870 - config["healthCheckX"]) * config["healthPotAtPercent"]
+        + (870 - config["healthCheckX"]) * percent_check
     )
     y = config["healthCheckY"]
     r, g, b = client_util.pixel(x, y)

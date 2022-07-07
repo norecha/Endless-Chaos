@@ -137,21 +137,6 @@
         "height": 11
       },
       "directional": false
-    },
-    {
-      "key": "z",
-      "abilityType": "specialty1",
-      "hold": false,
-      "holdTime": null,
-      "cast": false,
-      "castTime": null,
-      "position": {
-        "left": 895,
-        "top": 839,
-        "width": 13,
-        "height": 12
-      },
-      "directional": false
     }
   ]
 }

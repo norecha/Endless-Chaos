@@ -2,6 +2,22 @@
   "class": "Berserker",
   "abilities": [
     {
+      "key": "z",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": false,
+      "castTime": null,
+      "position": {
+        "left": 955,
+        "top": 890,
+        "width": 10,
+        "height": 10
+      },
+      "directional": false,
+      "image_path": "abilities/mayhem_ready.png"
+    },
+    {
       "key": "q",
       "abilityType": "normal",
       "hold": false,
@@ -138,18 +154,19 @@
     },
     {
       "key": "z",
-      "abilityType": "specialty1",
+      "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": false,
-      "castTime": null,
+      "cast": true,
+      "castTime": 1000,
       "position": {
-        "left": 895,
-        "top": 839,
+        "left": 952,
+        "top": 893,
         "width": 13,
         "height": 12
       },
-      "directional": false
+      "directional": true,
+      "image_path": "abilities/mayhem_burst.png"
     }
   ]
 }
