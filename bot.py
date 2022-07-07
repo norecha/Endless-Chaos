@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 import json
 from functools import cache
+import math
+import os
+import random
+import time
 from typing import Dict, List, Optional
 
 from absl import app
@@ -9,16 +13,13 @@ from absl import flags
 import coordinates
 import utils
 from ability import Ability
-
 from config import config
-import time
-import random
-import math
 
 FLAGS = flags.FLAGS
-flags.DEFINE_enum('mode', 'infinite_chaos', ['daily', 'infinite_chaos'], 'Mode')
+flags.DEFINE_integer('limit', None, 'optional chaos limit per char', lower_bound=1)
 flags.DEFINE_integer('chars', 1, '# of chars for daily mode', lower_bound=1)
 flags.DEFINE_integer('starting_char', 1, 'starting char', lower_bound=1)
+flags.DEFINE_bool('shutdown', False, 'shutdown pc when done')
 
 newStates = {
     "status": "inCity",
@@ -68,7 +69,7 @@ def switch_to_char(char):
     client_util.wait_loading_finish()
 
 
-def daily(chars, starting_char):
+def daily(chars, starting_char, limit: Optional[int] = None):
     global states
     for char in range(starting_char, starting_char + chars):
         print(f'Starting daily for {char=}')
@@ -76,7 +77,7 @@ def daily(chars, starting_char):
         # switch to char
         if char != starting_char:
             switch_to_char(char)
-        infinite_chaos(char, limit=2)
+        infinite_chaos(char, limit=limit)
         client_util.wait_loading_finish()
     print(f'Done with dailies')
 
@@ -89,7 +90,7 @@ def infinite_chaos(char, limit: Optional[int] = None):
     states["botStartTime"] = int(time.time_ns() / 1000000)
     abilities = None
     while True:
-        if limit and states["clearCount"] >= limit:
+        if limit is not None and states["clearCount"] >= limit:
             print('Hit chaos limit')
             return
         if states["status"] == "inCity":
@@ -1301,10 +1302,9 @@ def checkTimeout():
 
 
 def main(_argv):
-    if FLAGS.mode == 'infinite_chaos':
-        infinite_chaos(FLAGS.starting_char)
-    elif FLAGS.mode == 'daily':
-        daily(FLAGS.chars, FLAGS.starting_char)
+    daily(FLAGS.chars, FLAGS.starting_char, limit=FLAGS.limit)
+    if FLAGS.shutdown:
+        os.system('shutdown -s')
 
 
 if __name__ == "__main__":
