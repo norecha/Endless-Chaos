@@ -84,6 +84,7 @@ def daily(chars, starting_char):
 def infinite_chaos(char, limit: Optional[int] = None):
     print(f"Endless Chaos started {char=} {limit=}...")
     char_config = load_config(char)
+    print(f"On class {char_config['class']}")
     # save bot start time
     states["botStartTime"] = int(time.time_ns() / 1000000)
     abilities = None
@@ -1051,9 +1052,9 @@ def enterPortal():
             return
         if nowTime - portal_try > 4500:
             print('Trying to find portal again')
-            checkPortal()
-            calculateMinimapRelative(states["moveToX"], states["moveToY"])
-            print("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+            if checkPortal():
+                calculateMinimapRelative(states["moveToX"], states["moveToY"])
+                print("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
             portal_try = nowTime
 
         if (states["moveToX"] == config["screenCenterX"] and

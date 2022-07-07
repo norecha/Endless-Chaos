@@ -111,8 +111,8 @@
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": false,
-      "castTime": null,
+      "cast": true,
+      "castTime": 1000,
       "position": {
         "left": 873,
         "top": 907,
