@@ -6,6 +6,7 @@ import pyautogui
 import pygetwindow
 import pyscreeze
 import win32gui
+from absl import logging
 
 from config import config
 
@@ -112,10 +113,10 @@ class ClientUtil:
 
 
 def _get_window_relative() -> Tuple[int, int]:
-    print('Calculating window coordinates')
+    logging.info('Calculating window coordinates')
     windows = pygetwindow.getWindowsWithTitle('LOST ARK')
     if not windows:
-        print('LOST ARK window is not found')
+        logging.error('LOST ARK window is not found')
         exit(1)
     window = windows[0]
     h_wnd = window._hWnd

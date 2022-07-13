@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import json
 from functools import cache
+import logging as py_logging
 import math
 import os
 import random
@@ -9,6 +10,7 @@ from typing import Dict, List, Optional
 
 from absl import app
 from absl import flags
+from absl import logging
 
 import coordinates
 import utils
@@ -40,7 +42,7 @@ newStates = {
     "maxTime": -1,
 }
 states = newStates.copy()
-client_util = utils.ClientUtil()
+client_util: Optional[utils.ClientUtil] = None
 
 
 def load_config(char: int) -> Dict:
@@ -59,7 +61,7 @@ def load_abilities(char_config: Dict) -> List[Ability]:
 
 
 def switch_to_char(char):
-    print(f'Switching to {char=}')
+    logging.info(f'Switching to {char=}')
     utils.press('ESC', 1500)
     client_util.move_and_click(*coordinates.SWITCH_CHARACTERS, wait=1000)
     client_util.move_and_click(*coordinates.CHARACTERS[char - 1], wait=1000)
@@ -72,26 +74,26 @@ def switch_to_char(char):
 def daily(chars, starting_char, limit: Optional[int] = None):
     global states
     for char in range(starting_char, starting_char + chars):
-        print(f'Starting daily for {char=}')
+        logging.info(f'Starting daily for {char=}')
         states = newStates.copy()
         # switch to char
         if char != starting_char:
             switch_to_char(char)
         infinite_chaos(char, limit=limit)
         client_util.wait_loading_finish()
-    print(f'Done with dailies')
+    logging.info(f'Done with dailies')
 
 
 def infinite_chaos(char, limit: Optional[int] = None):
-    print(f"Endless Chaos started {char=} {limit=}...")
+    logging.info(f"Endless Chaos started {char=} {limit=}...")
     char_config = load_config(char)
-    print(f"On class {char_config['class']}")
+    logging.info(f"On class {char_config['class']}")
     # save bot start time
     states["botStartTime"] = int(time.time_ns() / 1000000)
     abilities = None
     while True:
         if limit is not None and states["clearCount"] >= limit:
-            print('Hit chaos limit')
+            logging.info('Hit chaos limit')
             return
         if states["status"] == "inCity":
             # states = newStates
@@ -105,7 +107,7 @@ def infinite_chaos(char, limit: Optional[int] = None):
                 continue
 
         elif states["status"] == "floor1":
-            print("floor1")
+            logging.info("floor1")
             client_util.move_to(x=config["screenCenterX"], y=config["screenCenterY"])
             sleep(200, 300)
             # wait for loading
@@ -114,7 +116,7 @@ def infinite_chaos(char, limit: Optional[int] = None):
                 quitChaos()
                 continue
             sleep(1000, 1200)
-            print("floor1 loaded")
+            logging.info("floor1 loaded")
 
             # saving clean abilities icons
             if abilities is None:
@@ -126,7 +128,7 @@ def infinite_chaos(char, limit: Optional[int] = None):
             # do floor one
             doFloor1(abilities, char_config)
         elif states["status"] == "floor2":
-            print("floor2")
+            logging.info("floor2")
             client_util.move_to(x=config["screenCenterX"], y=config["screenCenterY"])
             sleep(200, 300)
             # wait for loading
@@ -134,11 +136,11 @@ def infinite_chaos(char, limit: Optional[int] = None):
             if checkTimeout():
                 quitChaos()
                 continue
-            print("floor2 loaded")
+            logging.info("floor2 loaded")
             # do floor two
             doFloor2(abilities, char_config)
         elif states["status"] == "floor3":
-            print("floor3")
+            logging.info("floor3")
             client_util.move_to(x=config["screenCenterX"], y=config["screenCenterY"])
             sleep(200, 300)
             # wait for loading
@@ -146,7 +148,7 @@ def infinite_chaos(char, limit: Optional[int] = None):
             if checkTimeout():
                 quitChaos()
                 continue
-            print("floor3 loaded")
+            logging.info("floor3 loaded")
             # do floor 3
             # trigger start floor 3
             client_util.move_to(x=1045, y=450)
@@ -206,7 +208,7 @@ def enterChaos():
         while True:
             enterHand = client_util.locate_on_screen("./screenshots/enterChaos.png")
             if enterHand != None:
-                print("entering chaos...")
+                logging.info("entering chaos...")
                 utils.press(config["interact"])
                 break
             sleep(500, 800)
@@ -253,7 +255,7 @@ def doFloor1(abilities: List[Ability], char_config: Dict):
         quitChaos()
         return
 
-    print("floor 1 cleared")
+    logging.info("floor 1 cleared")
     calculateMinimapRelative(states["moveToX"], states["moveToY"])
     enterPortal()
     if checkTimeout():
@@ -277,7 +279,7 @@ def doFloor2(abilities: List[Ability], char_config: Dict):
         quitChaos()
         return
 
-    print("floor 2 cleared")
+    logging.info("floor 2 cleared")
     calculateMinimapRelative(states["moveToX"], states["moveToY"])
     enterPortal()
     if checkTimeout():
@@ -289,7 +291,7 @@ def doFloor2(abilities: List[Ability], char_config: Dict):
 
 
 def doFloor3Portal(abilities: List[Ability], char_config: Dict):
-    print('Identifying floor 3 portal')
+    logging.info('Identifying floor 3 portal')
     bossBar = None
     goldMob = False
     normalMob = False
@@ -307,11 +309,11 @@ def doFloor3Portal(abilities: List[Ability], char_config: Dict):
         return
 
     if bossBar != None:
-        print("purple boss bar located")
+        logging.info("purple boss bar located")
         states["purplePortalCount"] = states["purplePortalCount"] + 1
         utils.press(config["awakening"])
         useAbilities(abilities, char_config)
-        print("special portal cleared")
+        logging.info("special portal cleared")
         calculateMinimapRelative(states["moveToX"], states["moveToY"])
         if config["floor3"] == False:
             return
@@ -320,10 +322,10 @@ def doFloor3Portal(abilities: List[Ability], char_config: Dict):
     elif normalMob == True:
         return
     elif goldMob == True:
-        print("gold mob located")
+        logging.info("gold mob located")
         states["goldPortalCount"] = states["goldPortalCount"] + 1
         useAbilities(abilities, char_config)
-        print("special portal cleared")
+        logging.info("special portal cleared")
         calculateMinimapRelative(states["moveToX"], states["moveToY"])
         if config["floor3"] == False:
             return
@@ -341,7 +343,7 @@ def doFloor3Portal(abilities: List[Ability], char_config: Dict):
 
 def doFloor3(abilities: List[Ability], char_config: Dict, limit: Optional[int] = None):
     waitForLoading()
-    print("real floor 3 loaded")
+    logging.info("real floor 3 loaded")
 
     if checkTimeout():
         quitChaos()
@@ -368,12 +370,12 @@ def doFloor3(abilities: List[Ability], char_config: Dict, limit: Optional[int] =
     #     quitChaos()
     #     return
 
-    print("Chaos Dungeon Full cleared")
+    logging.info("Chaos Dungeon Full cleared")
     restartChaos(limit)
 
 def quitChaos():
     # quit
-    print("quitting")
+    logging.info("quitting")
     clearOk = client_util.locate_center_on_screen(
         "./screenshots/clearOk.png", confidence=0.75
     )
@@ -464,7 +466,7 @@ def printResult():
     if states["instanceStartTime"] != -1:
         states["minTime"] = int(min(lastRun, states["minTime"]))
         states["maxTime"] = int(max(lastRun, states["maxTime"]))
-    print(
+    logging.info(
         "Total runs completed: {}, full clears: {}, total death: {}, half runs: {}, timeout runs: {}, ".format(
             states["clearCount"],
             states["fullClearCount"],
@@ -473,14 +475,14 @@ def printResult():
             states["timeoutCount"],
         )
     )
-    print(
+    logging.info(
         "Average time: {}, fastest time: {}, slowest time: {}".format(
             avgTime,
             states["minTime"],
             states["maxTime"],
         )
     )
-    print(
+    logging.info(
         "gold portal count: {}, purple portal count: {}".format(
             states["goldPortalCount"], states["purplePortalCount"]
         )
@@ -531,7 +533,7 @@ def useAbilities(abilities: List[Ability],
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
             moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False)
             if config["useAwakening"]:
-                print('using awakening')
+                logging.info('using awakening')
                 utils.press(config["awakening"])
 
         # cast sequence
@@ -570,7 +572,7 @@ def useAbilities(abilities: List[Ability],
                     left, top, _w, _h = config["regions"]["minimap"]
                     states["moveToX"] = left + gold.rel_x
                     states["moveToY"] = top + gold.rel_y
-                    print(
+                    logging.info(
                         "gold x: {} y: {}, r: {} g: {} b: {}".format(
                             states["moveToX"], states["moveToY"], gold.r, gold.g, gold.b
                         )
@@ -595,7 +597,7 @@ def useAbilities(abilities: List[Ability],
                     left, top, _w, _h = config["regions"]["minimap"]
                     states["moveToX"] = left + red.rel_x
                     states["moveToY"] = top + red.rel_y
-                    print(
+                    logging.info(
                         "red mob x: {} y: {}, r: {} g: {} b: {}".format(
                             states["moveToX"], states["moveToY"], red.r, red.g, red.b
                         )
@@ -620,7 +622,7 @@ def useAbilities(abilities: List[Ability],
 
 def checkCDandCast(ability: Ability):
     if client_util.locate_on_screen(
-        ability.image, region=config["regions"]["abilities"]
+        ability.image, region=config["regions"]["abilities"], confidence=0.995
     ):
         if ability.directional:
             client_util.move_to(x=states["moveToX"], y=states["moveToY"])
@@ -668,7 +670,7 @@ def checkPortal():
         x, y = portal
         states["moveToX"] = x
         states["moveToY"] = y
-        print("portal image x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+        logging.info("portal image x: {} y: {}".format(states["moveToX"], states["moveToY"]))
         return True
 
     # # only check with portal image on floor 2
@@ -682,7 +684,7 @@ def checkPortal():
             left, top, _w, _h = config["regions"]["minimap"]
             states["moveToX"] = left + rel_x
             states["moveToY"] = top + rel_y
-            print(
+            logging.info(
                 "portal pixel x: {} y: {}, r: {} g: {} b: {}".format(
                     states["moveToX"], states["moveToY"], r, g, b
                 )
@@ -701,7 +703,7 @@ def checkFloor2Elite():
             left, top, _w, _h = config["regions"]["minimap"]
             states["moveToX"] = left + rel_x
             states["moveToY"] = top + rel_y
-            print(
+            logging.info(
                 "elite x: {} y: {}, r: {} g: {} b: {}".format(
                     states["moveToX"], states["moveToY"], r, g, b
                 )
@@ -720,7 +722,7 @@ def check_red_mob() -> bool:
             left, top, _w, _h = config["regions"]["minimap"]
             states["moveToX"] = left + rel_x
             states["moveToY"] = top + rel_y
-            print(
+            logging.info(
                 "red mob x: {} y: {}, r: {} g: {} b: {}".format(
                     states["moveToX"], states["moveToY"], r, g, b
                 )
@@ -739,7 +741,7 @@ def checkFloor3GoldMob():
             left, top, _w, _h = config["regions"]["minimap"]
             states["moveToX"] = left + rel_x
             states["moveToY"] = top + rel_y
-            print(
+            logging.info(
                 "gold x: {} y: {}, r: {} g: {} b: {}".format(
                     states["moveToX"], states["moveToY"], r, g, b
                 )
@@ -758,7 +760,7 @@ def checkFloor2Boss():
         left, top = bossLocation
         states["moveToX"] = left
         states["moveToY"] = top
-        print("boss x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+        logging.info("boss x: {} y: {}".format(states["moveToX"], states["moveToY"]))
         return True
     return False
 
@@ -779,7 +781,7 @@ def checkFloor2Boss():
 #             left, top, _w, _h = config["regions"]["minimap"]
 #             states["moveToX"] = left + entry[1]
 #             states["moveToY"] = top + entry[0]
-#             print(
+#             logging.info(
 #                 "Boss x: {} y: {}, r: {} g: {} b: {}".format(
 #                     states["moveToX"], states["moveToY"], r, g, b
 #                 )
@@ -801,7 +803,7 @@ def clickTower():
         states["moveToX"] = x
         states["moveToY"] = y + 190
         client_util.click(x=states["moveToX"], y=states["moveToY"], button=config["move"])
-        print("clicked rift core")
+        logging.info("clicked rift core")
         sleep(100, 120)
         utils.press(config["meleeAttack"])
         sleep(900, 960)
@@ -813,7 +815,7 @@ def clickTower():
         states["moveToX"] = x
         states["moveToY"] = y + 190
         client_util.click(x=states["moveToX"], y=states["moveToY"], button=config["move"])
-        print("clicked rift core")
+        logging.info("clicked rift core")
         sleep(100, 120)
         utils.press(config["meleeAttack"])
         sleep(900, 960)
@@ -834,7 +836,7 @@ def checkFloor3Tower(tower_result: SpiralResult):
         x, y = tower
         states["moveToX"] = x
         states["moveToY"] = y - 1
-        print("tower image x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+        logging.info("tower image x: {} y: {}".format(states["moveToX"], states["moveToY"]))
         return True
 
     if tower_result.found:
@@ -846,7 +848,7 @@ def checkFloor3Tower(tower_result: SpiralResult):
             states["moveToY"] = states["moveToY"] + 7
         elif tower_result.r in range(160, 165) and tower_result.g in range(160, 165) and tower_result.b in range(160, 165):
             states["moveToY"] = states["moveToY"] - 13
-        print(
+        logging.info(
             "tower pixel pos x: {} y: {}, r: {} g: {} b: {}".format(
                 states["moveToX"], states["moveToY"], tower_result.r, tower_result.g, tower_result.b
             )
@@ -875,7 +877,7 @@ def checkChaosFinish():
 
 def fightFloor2Boss():
     if client_util.locate_on_screen("./screenshots/bossBar.png", confidence=0.7):
-        print("boss bar located")
+        logging.info("boss bar located")
         utils.press(config["awakening"])
 
 
@@ -889,7 +891,7 @@ def calculateMinimapRelative(x, y):
 
     x = x - selfLeft
     y = y - selfTop
-    # print("relative to center pos x: {} y: {}".format(x, y))
+    # logging.info("relative to center pos x: {} y: {}".format(x, y))
 
     dist = 200
     if y < 0:
@@ -900,7 +902,7 @@ def calculateMinimapRelative(x, y):
             newY = y - abs(dist)
         else:
             newY = y + abs(dist)
-        # print("relative to center pos newX: 0 newY: {}".format(int(newY)))
+        # logging.info("relative to center pos newX: 0 newY: {}".format(int(newY)))
         states["moveToX"] = 0 + config["screenCenterX"]
         states["moveToY"] = int(newY) + config["screenCenterY"]
         return
@@ -909,7 +911,7 @@ def calculateMinimapRelative(x, y):
             newX = x - abs(dist)
         else:
             newX = x + abs(dist)
-        # print("relative to center pos newX: {} newY: 0".format(int(newX)))
+        # logging.info("relative to center pos newX: {} newY: 0".format(int(newX)))
         states["moveToX"] = int(newX) + config["screenCenterX"]
         states["moveToY"] = 0 + config["screenCenterY"]
         return
@@ -920,7 +922,7 @@ def calculateMinimapRelative(x, y):
     # newY = k * (newX - x) + y
     newX = (newY - y) / k + x
 
-    # print("before confining newX: {} newY: {}".format(int(newX), int(newY)))
+    # logging.info("before confining newX: {} newY: {}".format(int(newX), int(newY)))
     if abs(newX) > config["clickableAreaX"]:
         delta = (abs(newX) > config["clickableAreaX"]) * k
         newX = -config["clickableAreaX"] if newX < 0 else config["clickableAreaX"]
@@ -937,7 +939,7 @@ def calculateMinimapRelative(x, y):
         else:
             newX = newX - delta
 
-    # print(
+    # logging.info(
     #     "after confining relative to center pos newX: {} newY: {}".format(
     #         int(newX), int(newY)
     #     )
@@ -954,7 +956,7 @@ def moveToMinimapRelative(x, y, timeMin, timeMax, blink):
         and states["moveToY"] == config["screenCenterY"]
     ):
         return
-    print("moving to pos x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+    logging.info("moving to pos x: {} y: {}".format(states["moveToX"], states["moveToY"]))
 
     # count = 0
     # turn = True
@@ -1022,7 +1024,7 @@ def randomMove():
         config["screenCenterY"] + config["clickableAreaY"],
     )
 
-    print("random move to x: {} y: {}".format(x, y))
+    logging.info("random move to x: {} y: {}".format(x, y))
     client_util.click(x=x, y=y, button=config["move"])
     sleep(200, 250)
     client_util.click(x=x, y=y, button=config["move"])
@@ -1035,7 +1037,7 @@ def randomMove():
 def enterPortal():
     # repeatedly move and press g until black screen
     sleep(1100, 1200)
-    print("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+    logging.info("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
     enterTime = int(time.time_ns() / 1000000)
     portal_try = enterTime
     while True:
@@ -1050,10 +1052,10 @@ def enterPortal():
             states["instanceStartTime"] = -1
             return
         if nowTime - portal_try > 4500:
-            print('Trying to find portal again')
+            logging.info('Trying to find portal again')
             if checkPortal():
                 calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                print("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+                logging.info("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
             portal_try = nowTime
 
         if (states["moveToX"] == config["screenCenterX"] and
@@ -1076,7 +1078,7 @@ def enterPortal():
 
 # def enterPortal():
 #     # repeatedly move and press g until black screen
-#     print("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+#     logging.info("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
 #     turn = True
 #     deflect = 80
 #     while True:
@@ -1115,7 +1117,7 @@ def enterPortal():
 #             else:
 #                 x = x + deflect * 2.5
 #                 y = y - deflect
-#         # print('movex: {} movey: {} x:{} y: {} turn: {}'.format(states['moveToX'], states['moveToY'], x,y,turn))
+#         # logging.info('movex: {} movey: {} x:{} y: {} turn: {}'.format(states['moveToX'], states['moveToY'], x,y,turn))
 #         count = 0
 #         while count < 5:
 #             utils.press(config["interact"])
@@ -1140,7 +1142,7 @@ def enterPortal():
 
 
 def waitForLoading():
-    print("loading")
+    logging.info("loading")
     while True:
         leaveButton = client_util.locate_on_screen(
             "./screenshots/leave.png",
@@ -1181,7 +1183,7 @@ def doRepair():
         confidence=0.5,
         region=(1500, 134, 100, 100),
     ):
-        print('Repairing')
+        logging.info('Repairing')
         sleep(800, 900)
         utils.press("f1")
         sleep(800, 900)
@@ -1214,7 +1216,7 @@ def healthCheck(char_config: Dict):
     )
     y = config["healthCheckY"]
     r, g, b = client_util.pixel(x, y)
-    # print(x, r, g, b)
+    # logging.info(x, r, g, b)
     if r < 70 and config["useHealthPot"]:
         leaveButton = client_util.locate_center_on_screen(
             "./screenshots/leave.png",
@@ -1287,13 +1289,13 @@ def checkTimeout():
     currentTime = int(time.time_ns() / 1000000)
     # hacky way of quitting
     if states["instanceStartTime"] == -1:
-        print("hacky timeout")
+        logging.info("hacky timeout")
         # timeout = mouse_util.screenshot()
         # timeout.save("./timeout/weird" + str(currentTime) + ".png")
         states["badRunCount"] = states["badRunCount"] + 1
         return True
     if currentTime - states["instanceStartTime"] > config["timeLimit"]:
-        print("timeout triggered")
+        logging.info("timeout triggered")
         # timeout = mouse_util.screenshot()
         # timeout.save("./timeout/overtime" + str(currentTime) + ".png")
         states["timeoutCount"] = states["timeoutCount"] + 1
@@ -1301,7 +1303,23 @@ def checkTimeout():
     return False
 
 
+def test_ability(char: int, ability: int):
+    setup()
+    char_config = load_config(char)
+    abilities = load_abilities(char_config)
+    checkCDandCast(abilities[ability])
+
+
+def setup():
+    global client_util
+    file_handler = py_logging.FileHandler(filename='out.log', mode='w')
+    file_handler.setFormatter(logging.PythonFormatter())
+    logging.get_absl_logger().addHandler(file_handler)
+    client_util = utils.ClientUtil()
+
+
 def main(_argv):
+    setup()
     daily(FLAGS.chars, FLAGS.starting_char, limit=FLAGS.limit)
     if FLAGS.shutdown:
         os.system('shutdown -s')
