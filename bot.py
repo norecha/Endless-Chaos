@@ -22,6 +22,7 @@ flags.DEFINE_integer('limit', None, 'optional chaos limit per char', lower_bound
 flags.DEFINE_integer('chars', 1, '# of chars for daily mode', lower_bound=1)
 flags.DEFINE_integer('starting_char', 1, 'starting char', lower_bound=1)
 flags.DEFINE_bool('shutdown', False, 'shutdown pc when done')
+flags.DEFINE_bool('kill', False, 'kill lostark when done')
 
 newStates = {
     "status": "inCity",
@@ -73,6 +74,7 @@ def switch_to_char(char):
 
 def daily(chars, starting_char, limit: Optional[int] = None):
     global states
+    daily_states = []
     for char in range(starting_char, starting_char + chars):
         logging.info(f'Starting daily for {char=}')
         states = newStates.copy()
@@ -81,7 +83,12 @@ def daily(chars, starting_char, limit: Optional[int] = None):
             switch_to_char(char)
         infinite_chaos(char, limit=limit)
         client_util.wait_loading_finish()
+        daily_states.append(states)
     logging.info(f'Done with dailies')
+    for i, state in enumerate(daily_states):
+        logging.info(f'Character {i + starting_char}:')
+        printResult(state)
+        logging.info('----------------------------')
 
 
 def infinite_chaos(char, limit: Optional[int] = None):
@@ -256,7 +263,8 @@ def doFloor1(abilities: List[Ability], char_config: Dict):
         return
 
     logging.info("floor 1 cleared")
-    calculateMinimapRelative(states["moveToX"], states["moveToY"])
+    calculateMinimapRelative(
+        states["moveToX"], states["moveToY"], dist=100)
     enterPortal()
     if checkTimeout():
         quitChaos()
@@ -280,7 +288,8 @@ def doFloor2(abilities: List[Ability], char_config: Dict):
         return
 
     logging.info("floor 2 cleared")
-    calculateMinimapRelative(states["moveToX"], states["moveToY"])
+    calculateMinimapRelative(
+        states["moveToX"], states["moveToY"], dist=100)
     enterPortal()
     if checkTimeout():
         quitChaos()
@@ -314,7 +323,8 @@ def doFloor3Portal(abilities: List[Ability], char_config: Dict):
         utils.press(config["awakening"])
         useAbilities(abilities, char_config)
         logging.info("special portal cleared")
-        calculateMinimapRelative(states["moveToX"], states["moveToY"])
+        calculateMinimapRelative(
+            states["moveToX"], states["moveToY"], dist=100)
         if config["floor3"] == False:
             return
         enterPortal()
@@ -326,7 +336,8 @@ def doFloor3Portal(abilities: List[Ability], char_config: Dict):
         states["goldPortalCount"] = states["goldPortalCount"] + 1
         useAbilities(abilities, char_config)
         logging.info("special portal cleared")
-        calculateMinimapRelative(states["moveToX"], states["moveToY"])
+        calculateMinimapRelative(
+            states["moveToX"], states["moveToY"], dist=100)
         if config["floor3"] == False:
             return
         enterPortal()
@@ -395,7 +406,7 @@ def quitChaos():
     utils.sleep(1500)
     states["status"] = "inCity"
     states["clearCount"] = states["clearCount"] + 1
-    printResult()
+    printResult(states)
 
     return
 
@@ -403,7 +414,7 @@ def quitChaos():
 def restartChaos(limit: Optional[int] = None):
     states["fullClearCount"] = states["fullClearCount"] + 1
     states["clearCount"] = states["clearCount"] + 1
-    printResult()
+    printResult(states)
     if limit and states["clearCount"] >= limit:
         quitChaos()
         return
@@ -457,7 +468,7 @@ def restartChaos(limit: Optional[int] = None):
     return
 
 
-def printResult():
+def printResult(states):
     lastRun = (int(time.time_ns() / 1000000) - states["instanceStartTime"]) / 1000
     avgTime = int(
         ((int(time.time_ns() / 1000000) - states["botStartTime"]) / 1000)
@@ -520,18 +531,18 @@ def useAbilities(abilities: List[Ability],
         # check elite and mobs
         if states["status"] == "floor1" and check_red_mob():
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
-            moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False)
+            moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False, char_config)
         elif states["status"] == "floor2" and checkFloor2Elite():
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
-            moveToMinimapRelative(states["moveToX"], states["moveToY"], 750, 850, False)
+            moveToMinimapRelative(states["moveToX"], states["moveToY"], 750, 850, False, char_config)
         elif states["status"] == "floor2" and check_red_mob():
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
-            moveToMinimapRelative(states["moveToX"], states["moveToY"], 400, 500, False)
+            moveToMinimapRelative(states["moveToX"], states["moveToY"], 400, 500, False, char_config)
         elif states["status"] == "floor3" and checkChaosFinish():
             return
         elif states["status"] == "floor3" and checkFloor2Elite():
             calculateMinimapRelative(states["moveToX"], states["moveToY"])
-            moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False)
+            moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False, char_config)
             if config["useAwakening"]:
                 logging.info('using awakening')
                 utils.press(config["awakening"])
@@ -542,7 +553,10 @@ def useAbilities(abilities: List[Ability],
             healthCheck(char_config)
 
             # check portal
-            if check_portal and ability_index % 2 == 0 and states["status"] in ("floor1", "floor2", "floor3") and checkPortal():
+            if (check_portal and
+                ability_index % 2 == 0 and
+                states["status"] in ("floor1", "floor2", "floor3") and
+                checkPortal()):
                 client_util.click(
                     x=config["screenCenterX"],
                     y=config["screenCenterY"],
@@ -560,7 +574,7 @@ def useAbilities(abilities: List[Ability],
             if states["status"] == "floor2" and checkFloor2Boss():
                 calculateMinimapRelative(states["moveToX"], states["moveToY"])
                 moveToMinimapRelative(
-                    states["moveToX"], states["moveToY"], 950, 1050, True
+                    states["moveToX"], states["moveToY"], 950, 1050, True, char_config
                 )
                 fightFloor2Boss()
             # floor3 checks take long time, don't do it after every ability
@@ -579,20 +593,29 @@ def useAbilities(abilities: List[Ability],
                     )
                     calculateMinimapRelative(states["moveToX"], states["moveToY"])
                     moveToMinimapRelative(
-                        states["moveToX"], states["moveToY"], 500, 600, False
+                        states["moveToX"], states["moveToY"], 500, 600, False, char_config
                     )
                 elif checkFloor3Tower(tower):
-                    if not elite.found and not red.found:
-                        randomMove()
-                        tower, = check_spiral_predicates([is_tower_pixel])
-                        checkFloor3Tower(tower)
-                    calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                    moveToMinimapRelative(
-                        states["moveToX"], states["moveToY"], 1200, 1300, True
-                    )
-                    # utils.press("x")
-                    sleep(200, 220)
-                    clickTower()
+                    just_move_to_tower = not elite.found and not red.found
+                    loop = 3 if just_move_to_tower else 1
+                    for i in range(loop):
+                        if i > 0:
+                            sleep(200, 220)
+                            tower, = check_spiral_predicates([is_tower_pixel])
+                            if not checkFloor3Tower(tower):
+                                logging.info('Cannot find the tower, try later')
+                                break
+                        if just_move_to_tower:
+                            logging.info('Random moving to tower')
+                            randomMove(minimap_x=states["moveToX"], minimap_y=states["moveToY"])
+                            tower, = check_spiral_predicates([is_tower_pixel])
+                            checkFloor3Tower(tower)
+                        calculateMinimapRelative(states["moveToX"], states["moveToY"])
+                        moveToMinimapRelative(
+                            states["moveToX"], states["moveToY"], 1200, 1300, True, char_config
+                        )
+                        sleep(400, 420)
+                        clickTower()
                 elif red.found:
                     left, top, _w, _h = config["regions"]["minimap"]
                     states["moveToX"] = left + red.rel_x
@@ -604,12 +627,12 @@ def useAbilities(abilities: List[Ability],
                     )
                     calculateMinimapRelative(states["moveToX"], states["moveToY"])
                     moveToMinimapRelative(
-                        states["moveToX"], states["moveToY"], 200, 300, False
+                        states["moveToX"], states["moveToY"], 200, 300, False, char_config
                     )
                 elif checkFloor2Boss():
                     calculateMinimapRelative(states["moveToX"], states["moveToY"])
                     moveToMinimapRelative(
-                        states["moveToX"], states["moveToY"], 800, 900, True
+                        states["moveToX"], states["moveToY"], 800, 900, True, char_config
                     )
 
             # cast spells
@@ -806,6 +829,8 @@ def clickTower():
         logging.info("clicked rift core")
         sleep(100, 120)
         utils.press(config["meleeAttack"])
+        sleep(300, 320)
+        utils.press(config["meleeAttack"])
         sleep(900, 960)
         utils.press(config["meleeAttack"])
     elif riftCore2 != None:
@@ -817,6 +842,8 @@ def clickTower():
         client_util.click(x=states["moveToX"], y=states["moveToY"], button=config["move"])
         logging.info("clicked rift core")
         sleep(100, 120)
+        utils.press(config["meleeAttack"])
+        sleep(300, 320)
         utils.press(config["meleeAttack"])
         sleep(900, 960)
         utils.press(config["meleeAttack"])
@@ -881,7 +908,7 @@ def fightFloor2Boss():
         utils.press(config["awakening"])
 
 
-def calculateMinimapRelative(x, y):
+def calculateMinimapRelative(x, y, dist=200):
     selfLeft = config["minimapCenterX"]
     selfTop = config["minimapCenterY"]
     if abs(selfLeft - x) <= 3 and abs(selfTop - y) <= 3:
@@ -893,7 +920,6 @@ def calculateMinimapRelative(x, y):
     y = y - selfTop
     # logging.info("relative to center pos x: {} y: {}".format(x, y))
 
-    dist = 200
     if y < 0:
         dist = -dist
 
@@ -949,7 +975,7 @@ def calculateMinimapRelative(x, y):
     return
 
 
-def moveToMinimapRelative(x, y, timeMin, timeMax, blink):
+def moveToMinimapRelative(x, y, timeMin, timeMax, blink, char_config):
     # move one step to direction
     if (
         states["moveToX"] == config["screenCenterX"]
@@ -972,7 +998,7 @@ def moveToMinimapRelative(x, y, timeMin, timeMax, blink):
     # sleep(timeMin, timeMax)
 
     # optional blink here
-    if blink:
+    if blink and not is_gunlancer(char_config):
         utils.press(config["blink"])
         sleep(100, 150)
 
@@ -1014,21 +1040,29 @@ def moveToMinimapRelative(x, y, timeMin, timeMax, blink):
     #     count = count + 1
 
 
-def randomMove():
-    x = random.randint(
-        config["screenCenterX"] - config["clickableAreaX"],
-        config["screenCenterX"] + config["clickableAreaX"],
-    )
-    y = random.randint(
-        config["screenCenterY"] - config["clickableAreaY"],
-        config["screenCenterY"] + config["clickableAreaY"],
-    )
+def randomMove(minimap_x: Optional[int] = None, minimap_y: Optional[int] = None):
+    from_x = config["screenCenterX"] - config["clickableAreaX"]
+    to_x = config["screenCenterX"] + config["clickableAreaX"]
+    from_y = config["screenCenterY"] - config["clickableAreaY"]
+    to_y = config["screenCenterY"] + config["clickableAreaY"]
+
+    x = random.randint(from_x, to_x)
+    if minimap_x and minimap_y:
+        # dont random move to same quadrant
+        if (x < config["screenCenterX"]) == (minimap_x < config["minimapCenterX"]):
+            # if both have same signs, make sure y's have different signs
+            if minimap_y < config["minimapCenterY"]:
+                from_y = config["screenCenterY"]
+            else:
+                to_y = config["screenCenterY"]
+
+    y = random.randint(from_y, to_y)
 
     logging.info("random move to x: {} y: {}".format(x, y))
     client_util.click(x=x, y=y, button=config["move"])
     sleep(200, 250)
     client_util.click(x=x, y=y, button=config["move"])
-    sleep(200, 250)
+    sleep(300, 350)
     # mouse_util.click(
     #     x=config["screenCenterX"], y=config["screenCenterY"], button=config["move"]
     # )
@@ -1054,7 +1088,8 @@ def enterPortal():
         if nowTime - portal_try > 4500:
             logging.info('Trying to find portal again')
             if checkPortal():
-                calculateMinimapRelative(states["moveToX"], states["moveToY"])
+                calculateMinimapRelative(
+                    states["moveToX"], states["moveToY"], dist=100)
                 logging.info("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
             portal_try = nowTime
 
@@ -1187,9 +1222,9 @@ def doRepair():
         sleep(800, 900)
         utils.press("f1")
         sleep(800, 900)
-        client_util.move_to(1182, 654)
+        client_util.move_to(1130, 660)
         sleep(800, 900)
-        client_util.click(1182, 654, button="left")
+        client_util.click(1130, 660, button="left")
         sleep(800, 900)
         client_util.move_to(1068, 644)
         sleep(800, 900)
@@ -1201,8 +1236,12 @@ def doRepair():
         sleep(800, 900)
 
 
-def is_berserker(char_config: Dict):
+def is_berserker(char_config: Dict) -> bool:
     return char_config['class'] == 'Berserker'
+
+
+def is_gunlancer(char_config: Dict) -> bool:
+    return char_config['class'] == 'Gunlancer'
 
 
 def healthCheck(char_config: Dict):
@@ -1322,7 +1361,9 @@ def main(_argv):
     setup()
     daily(FLAGS.chars, FLAGS.starting_char, limit=FLAGS.limit)
     if FLAGS.shutdown:
-        os.system('shutdown -s')
+        os.system('shutdown /s /t 10')
+    elif FLAGS.kill:
+        os.system("taskkill /im LOSTARK.exe")
 
 
 if __name__ == "__main__":

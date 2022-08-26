@@ -1,0 +1,140 @@
+{
+  "class": "Gunlancer",
+  "abilities": [
+    {
+      "key": "q",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": false,
+      "castTime": null,
+      "position": {
+        "left": 738,
+        "top": 869,
+        "width": 15,
+        "height": 15
+      },
+      "directional": false
+    },
+    {
+      "key": "e",
+      "abilityType": "normal",
+      "hold": true,
+      "holdTime": 1600,
+      "cast": false,
+      "castTime": null,
+      "position": {
+        "left": 777,
+        "top": 869,
+        "width": 15,
+        "height": 15
+      },
+      "directional": false
+    },
+    {
+      "key": "f",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": true,
+      "castTime": 500,
+      "position": {
+        "left": 816,
+        "top": 869,
+        "width": 15,
+        "height": 15
+      },
+      "directional": true
+    },
+    {
+      "key": "r",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": true,
+      "castTime": 350,
+      "position": {
+        "left": 855,
+        "top": 869,
+        "width": 15,
+        "height": 15
+      },
+      "directional": false
+    },
+    {
+      "key": "1",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": true,
+      "castTime": 1500,
+      "position": {
+        "left": 759,
+        "top": 907,
+        "width": 15,
+        "height": 15
+      },
+      "directional": false
+    },
+    {
+      "key": "2",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": false,
+      "castTime": null,
+      "position": {
+        "left": 797,
+        "top": 907,
+        "width": 15,
+        "height": 15
+      },
+      "directional": false
+    },
+    {
+      "key": "3",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": true,
+      "castTime": 1500,
+      "position": {
+        "left": 835,
+        "top": 907,
+        "width": 15,
+        "height": 15
+      },
+      "directional": true
+    },
+    {
+      "key": "4",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": false,
+      "castTime": null,
+      "position": {
+        "left": 873,
+        "top": 907,
+        "width": 15,
+        "height": 15
+      },
+      "directional": false
+    },
+    {
+      "key": "v",
+      "abilityType": "awakening",
+      "hold": false,
+      "holdTime": null,
+      "cast": false,
+      "castTime": null,
+      "position": {
+        "left": 691,
+        "top": 894,
+        "width": 19,
+        "height": 11
+      },
+      "directional": true
+    }
+  ]
+}
