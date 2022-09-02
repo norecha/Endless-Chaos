@@ -1,5 +1,5 @@
 {
-  "class": "Gunlancer",
+  "class": "Gunslinger",
   "abilities": [
     {
       "key": "q",
@@ -20,7 +20,7 @@
       "key": "e",
       "abilityType": "normal",
       "hold": true,
-      "holdTime": 1600,
+      "holdTime": 2000,
       "cast": false,
       "castTime": null,
       "position": {
@@ -29,7 +29,7 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "f",
@@ -37,7 +37,7 @@
       "hold": false,
       "holdTime": null,
       "cast": true,
-      "castTime": 500,
+      "castTime": 2000,
       "position": {
         "left": 816,
         "top": 869,
@@ -51,8 +51,8 @@
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": true,
-      "castTime": 350,
+      "cast": false,
+      "castTime": null,
       "position": {
         "left": 855,
         "top": 869,
@@ -89,30 +89,30 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
     },
     {
       "key": "3",
       "abilityType": "normal",
-      "hold": false,
-      "holdTime": null,
-      "cast": true,
-      "castTime": 1500,
+      "hold": true,
+      "holdTime": 3000,
+      "cast": false,
+      "castTime": null,
       "position": {
         "left": 835,
         "top": 907,
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "4",
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": false,
-      "castTime": null,
+      "cast": true,
+      "castTime": 1000,
       "position": {
         "left": 873,
         "top": 907,
@@ -134,7 +134,22 @@
         "width": 19,
         "height": 11
       },
-      "directional": true
+      "directional": false
+    },
+    {
+      "key": "z",
+      "abilityType": "specialty1",
+      "hold": false,
+      "holdTime": null,
+      "cast": false,
+      "castTime": null,
+      "position": {
+        "left": 895,
+        "top": 839,
+        "width": 13,
+        "height": 12
+      },
+      "directional": false
     }
   ]
 }
