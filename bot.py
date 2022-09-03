@@ -1,3 +1,4 @@
+from collections import namedtuple
 from dataclasses import dataclass
 import json
 from functools import cache
@@ -23,6 +24,9 @@ flags.DEFINE_integer('chars', 1, '# of chars for daily mode', lower_bound=1)
 flags.DEFINE_integer('starting_char', 1, 'starting char', lower_bound=1)
 flags.DEFINE_bool('shutdown', False, 'shutdown pc when done')
 flags.DEFINE_bool('kill', False, 'kill lostark when done')
+
+MinimapCoord = namedtuple("MinimapCoord", "x y")
+ScreenCoord = namedtuple("ScreenCoord", "x y")
 
 newStates = {
     "status": "inCity",
@@ -163,7 +167,7 @@ def infinite_chaos(char, limit: Optional[int] = None):
             client_util.click(button=config["move"])
             sleep(500, 600)
             doFloor3Portal(abilities, char_config)
-            if checkTimeout() or config["floor3"] == False:
+            if checkTimeout() or not config["floor3"]:
                 quitChaos()
                 continue
             doFloor3(abilities, char_config, limit)
@@ -179,7 +183,7 @@ def enterChaos():
     client_util.click(button=rightClick)
     sleep(200, 300)
 
-    if config["shortcutEnterChaos"] == True:
+    if config["shortcutEnterChaos"]:
         client_util.wait_loading_finish()
         sleep(600, 800)
         while True:
@@ -197,7 +201,7 @@ def enterChaos():
             enterButton = client_util.locate_center_on_screen(
                 "./screenshots/enterButton.png", confidence=0.75
             )
-            if enterButton != None:
+            if enterButton is not None:
                 x, y = enterButton
                 client_util.move_to(x=x, y=y)
                 sleep(600, 800)
@@ -214,7 +218,7 @@ def enterChaos():
     else:
         while True:
             enterHand = client_util.locate_on_screen("./screenshots/enterChaos.png")
-            if enterHand != None:
+            if enterHand is not None:
                 logging.info("entering chaos...")
                 utils.press(config["interact"])
                 break
@@ -224,7 +228,7 @@ def enterChaos():
         acceptButton = client_util.locate_center_on_screen(
             "./screenshots/acceptButton.png", confidence=0.75
         )
-        if acceptButton != None:
+        if acceptButton is not None:
             x, y = acceptButton
             client_util.move_to(x=x, y=y)
             sleep(600, 800)
@@ -243,7 +247,7 @@ def doFloor1(abilities: List[Ability], char_config: Dict):
     client_util.click(button=config["move"])
 
     # delayed start for better aoe abiltiy usage at floor1 beginning
-    if config["delayedStart"] != None:
+    if config["delayedStart"] is not None:
         sleep(config["delayedStart"] - 100, config["delayedStart"] + 100)
 
     # # move to a side
@@ -255,7 +259,7 @@ def doFloor1(abilities: List[Ability], char_config: Dict):
     # mouse_util.click(x=960, y=530, button=config['move'])
 
     # smash available abilities
-    useAbilities(abilities, char_config)
+    portal_minimap_coord = useAbilities(abilities, char_config)
 
     # bad run quit
     if checkTimeout():
@@ -263,9 +267,8 @@ def doFloor1(abilities: List[Ability], char_config: Dict):
         return
 
     logging.info("floor 1 cleared")
-    calculateMinimapRelative(
-        states["moveToX"], states["moveToY"], dist=100)
-    enterPortal()
+    portal_coord = convert_minimap_to_screen(portal_minimap_coord, dist=100)
+    enterPortal(portal_coord)
     if checkTimeout():
         quitChaos()
         return
@@ -280,7 +283,7 @@ def doFloor2(abilities: List[Ability], char_config: Dict):
     sleep(800, 900)
     client_util.click(x=945, y=550, button=config["move"])
 
-    useAbilities(abilities, char_config)
+    portal_minimap_coord = useAbilities(abilities, char_config)
 
     # bad run quit
     if checkTimeout():
@@ -288,9 +291,8 @@ def doFloor2(abilities: List[Ability], char_config: Dict):
         return
 
     logging.info("floor 2 cleared")
-    calculateMinimapRelative(
-        states["moveToX"], states["moveToY"], dist=100)
-    enterPortal()
+    portal_coord = convert_minimap_to_screen(portal_minimap_coord, dist=100)
+    enterPortal(portal_coord)
     if checkTimeout():
         quitChaos()
         return
@@ -303,48 +305,46 @@ def doFloor3Portal(abilities: List[Ability], char_config: Dict):
     logging.info('Identifying floor 3 portal')
     bossBar = None
     goldMob = False
-    normalMob = False
+    normal_mob = False
     for i in range(0, 10):
         goldMob = checkFloor3GoldMob()
-        normalMob = check_red_mob()
+        normal_mob = check_red_mob()
         bossBar = client_util.locate_on_screen("./screenshots/bossBar.png", confidence=0.7)
-        if normalMob == True:
+        if normal_mob:
             return
-        if goldMob == True or bossBar != None:
+        if goldMob or bossBar is not None:
             break
         sleep(500, 550)
 
-    if goldMob == False and bossBar == None and config["floor3"] == False:
+    if not goldMob and bossBar is None and not config["floor3"]:
         return
 
-    if bossBar != None:
+    if bossBar is not None:
         logging.info("purple boss bar located")
         states["purplePortalCount"] = states["purplePortalCount"] + 1
         utils.press(config["awakening"])
-        useAbilities(abilities, char_config)
+        portal_minimap_coord = useAbilities(abilities, char_config)
         logging.info("special portal cleared")
-        calculateMinimapRelative(
-            states["moveToX"], states["moveToY"], dist=100)
-        if config["floor3"] == False:
+        portal_coord = convert_minimap_to_screen(portal_minimap_coord, dist=100)
+        if not config["floor3"]:
             return
-        enterPortal()
+        enterPortal(portal_coord)
         sleep(800, 900)
-    elif normalMob == True:
+    elif normal_mob:
         return
-    elif goldMob == True:
+    elif goldMob:
         logging.info("gold mob located")
         states["goldPortalCount"] = states["goldPortalCount"] + 1
-        useAbilities(abilities, char_config)
+        portal_minimap_coord = useAbilities(abilities, char_config)
         logging.info("special portal cleared")
-        calculateMinimapRelative(
-            states["moveToX"], states["moveToY"], dist=100)
-        if config["floor3"] == False:
+        portal_coord = convert_minimap_to_screen(portal_minimap_coord, dist=100)
+        if not config["floor3"]:
             return
-        enterPortal()
+        enterPortal(portal_coord)
         sleep(800, 900)
     else:
         # hacky quit
-        states["instanceStartTime"] == -1
+        states["instanceStartTime"] = -1
         return
 
     # bad run quit
@@ -384,13 +384,14 @@ def doFloor3(abilities: List[Ability], char_config: Dict, limit: Optional[int] =
     logging.info("Chaos Dungeon Full cleared")
     restartChaos(limit)
 
+
 def quitChaos():
     # quit
     logging.info("quitting")
     clearOk = client_util.locate_center_on_screen(
         "./screenshots/clearOk.png", confidence=0.75
     )
-    if clearOk != None:
+    if clearOk is not None:
         x, y = clearOk
         client_util.move_to(x=x, y=y)
         sleep(600, 800)
@@ -430,7 +431,7 @@ def restartChaos(limit: Optional[int] = None):
             confidence=0.7,
             region=config["regions"]["leaveMenu"],
         )
-        if selectLevelButton != None:
+        if selectLevelButton is not None:
             x, y = selectLevelButton
 
             client_util.move_to(x=x, y=y)
@@ -444,7 +445,7 @@ def restartChaos(limit: Optional[int] = None):
         enterButton = client_util.locate_center_on_screen(
             "./screenshots/enterButton.png", confidence=0.75
         )
-        if enterButton != None:
+        if enterButton is not None:
             x, y = enterButton
             client_util.move_to(x=x, y=y)
             sleep(600, 800)
@@ -456,7 +457,7 @@ def restartChaos(limit: Optional[int] = None):
         acceptButton = client_util.locate_center_on_screen(
             "./screenshots/acceptButton.png", confidence=0.75
         )
-        if acceptButton != None:
+        if acceptButton is not None:
             x, y = acceptButton
             client_util.move_to(x=x, y=y)
             sleep(600, 800)
@@ -521,35 +522,31 @@ def check_spiral_predicates(predicates) -> List[SpiralResult]:
 
 def useAbilities(abilities: List[Ability],
                  char_config: Dict,
-                 check_portal: Optional[bool] = True):
+                 check_portal: Optional[bool] = True) -> Optional[MinimapCoord]:
     while True:
-        diedCheck(char_config)
+        diedCheck()
         healthCheck(char_config)
         if checkTimeout():
             return
 
         # check elite and mobs
-        if states["status"] == "floor1" and check_red_mob():
-            calculateMinimapRelative(states["moveToX"], states["moveToY"])
-            moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False, char_config)
-        elif states["status"] == "floor2" and checkFloor2Elite():
-            calculateMinimapRelative(states["moveToX"], states["moveToY"])
-            moveToMinimapRelative(states["moveToX"], states["moveToY"], 750, 850, False, char_config)
-        elif states["status"] == "floor2" and check_red_mob():
-            calculateMinimapRelative(states["moveToX"], states["moveToY"])
-            moveToMinimapRelative(states["moveToX"], states["moveToY"], 400, 500, False, char_config)
+        if states["status"] == "floor1" and (red_mob := check_red_mob()):
+            move_to_minimap_coord(red_mob, 200, 300, False, char_config)
+        elif states["status"] == "floor2" and (elite := check_elite()):
+            move_to_minimap_coord(elite, 750, 850, False, char_config)
+        elif states["status"] == "floor2" and (red_mob := check_red_mob()):
+            move_to_minimap_coord(red_mob, 400, 500, False, char_config)
         elif states["status"] == "floor3" and checkChaosFinish():
             return
-        elif states["status"] == "floor3" and checkFloor2Elite():
-            calculateMinimapRelative(states["moveToX"], states["moveToY"])
-            moveToMinimapRelative(states["moveToX"], states["moveToY"], 200, 300, False, char_config)
+        elif states["status"] == "floor3" and (elite := check_elite()):
+            move_to_minimap_coord(elite, 200, 300, False, char_config)
             if config["useAwakening"]:
                 logging.info('using awakening')
                 utils.press(config["awakening"])
 
         # cast sequence
         for ability_index, ability in enumerate(abilities):
-            diedCheck(char_config)
+            diedCheck()
             healthCheck(char_config)
 
             # check portal
@@ -563,19 +560,15 @@ def useAbilities(abilities: List[Ability],
                     button=config["move"],
                 )
                 sleep(100, 150)
-                checkPortal()
-                return
+                return checkPortal()
 
             # click rift core
             if states["status"] == "floor3":
                 clickTower()
 
             # check high-priority mobs
-            if states["status"] == "floor2" and checkFloor2Boss():
-                calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                moveToMinimapRelative(
-                    states["moveToX"], states["moveToY"], 950, 1050, True, char_config
-                )
+            if states["status"] == "floor2" and (boss := checkFloor2Boss()):
+                move_to_minimap_coord(boss, 950, 1050, True, char_config)
                 fightFloor2Boss()
             # floor3 checks take long time, don't do it after every ability
             elif states["status"] == "floor3" and ability_index % 3 == 0:
@@ -584,62 +577,39 @@ def useAbilities(abilities: List[Ability],
                     [is_gold_mob, is_red_mob, is_tower_pixel, is_elite_mob])
                 if gold.found:
                     left, top, _w, _h = config["regions"]["minimap"]
-                    states["moveToX"] = left + gold.rel_x
-                    states["moveToY"] = top + gold.rel_y
+                    coord = MinimapCoord(left + gold.rel_x, top + gold.rel_y)
                     logging.info(
-                        "gold x: {} y: {}, r: {} g: {} b: {}".format(
-                            states["moveToX"], states["moveToY"], gold.r, gold.g, gold.b
-                        )
+                        "gold {}, r: {} g: {} b: {}".format(coord, gold.r, gold.g, gold.b)
                     )
-                    calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                    moveToMinimapRelative(
-                        states["moveToX"], states["moveToY"], 500, 600, False, char_config
-                    )
-                elif checkFloor3Tower(tower):
-                    just_move_to_tower = not elite.found and not red.found
-                    loop = 3 if just_move_to_tower else 1
-                    for i in range(loop):
-                        if i > 0:
-                            sleep(200, 220)
-                            tower, = check_spiral_predicates([is_tower_pixel])
-                            if not checkFloor3Tower(tower):
-                                logging.info('Cannot find the tower, try later')
-                                break
-                        if just_move_to_tower:
-                            logging.info('Random moving to tower')
-                            randomMove(minimap_x=states["moveToX"], minimap_y=states["moveToY"])
-                            tower, = check_spiral_predicates([is_tower_pixel])
-                            checkFloor3Tower(tower)
-                        calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                        moveToMinimapRelative(
-                            states["moveToX"], states["moveToY"], 1200, 1300, True, char_config
-                        )
-                        sleep(400, 420)
-                        clickTower()
+                    move_to_minimap_coord(coord, 500, 600, False, char_config)
+                elif tower_coord := checkFloor3Tower(tower):
+                    logging.info('Zooming to tower')
+                    for i in range(3):
+                        logging.info('Random moving to tower')
+                        randomMove(tower_coord)
+                        # search again since we moved
+                        tower, = check_spiral_predicates([is_tower_pixel])
+                        tower_coord = checkFloor3Tower(tower)
+                        if tower_coord:
+                            move_to_minimap_coord(tower_coord, 1200, 1300, True, char_config)
+                            sleep(400, 420)
+                            clickTower()
+                        else:
+                            logging.info('Lost the tower, try later')
+                            break
                 elif red.found:
                     left, top, _w, _h = config["regions"]["minimap"]
-                    states["moveToX"] = left + red.rel_x
-                    states["moveToY"] = top + red.rel_y
-                    logging.info(
-                        "red mob x: {} y: {}, r: {} g: {} b: {}".format(
-                            states["moveToX"], states["moveToY"], red.r, red.g, red.b
-                        )
-                    )
-                    calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                    moveToMinimapRelative(
-                        states["moveToX"], states["moveToY"], 200, 300, False, char_config
-                    )
-                elif checkFloor2Boss():
-                    calculateMinimapRelative(states["moveToX"], states["moveToY"])
-                    moveToMinimapRelative(
-                        states["moveToX"], states["moveToY"], 800, 900, True, char_config
-                    )
+                    red_coord = MinimapCoord(left + red.rel_x, top + red.rel_y)
+                    logging.info("red mob {}, r: {} g: {} b: {}".format(red_coord, red.r, red.g, red.b))
+                    move_to_minimap_coord(red_coord, 200, 300, False, char_config)
+                elif boss := checkFloor2Boss():
+                    move_to_minimap_coord(boss, 800, 900, True, char_config)
 
             # cast spells
             checkCDandCast(ability)
 
         # 防止卡先试试这样
-        if states["status"] == "floor3" and not checkFloor2Elite():
+        if states["status"] == "floor3" and not check_elite():
             randomMove()
 
 
@@ -684,74 +654,62 @@ def checkCDandCast(ability: Ability):
                 utils.press(ability.key)
 
 
-def checkPortal():
+def checkPortal() -> Optional[MinimapCoord]:
     # check portal image
     portal = client_util.locate_center_on_screen(
         "./screenshots/portal.png", region=config["regions"]["minimap"], confidence=0.7
     )
-    if portal != None:
+    if portal is not None:
         x, y = portal
-        states["moveToX"] = x
-        states["moveToY"] = y
-        logging.info("portal image x: {} y: {}".format(states["moveToX"], states["moveToY"]))
-        return True
-
-    # # only check with portal image on floor 2
-    # if states["status"] == "floor2":
-    #     return False
+        coord = MinimapCoord(x, y)
+        logging.info("portal image {}".format(coord))
+        return coord
 
     for r, g, b, rel_x, rel_y in spiral_search():
         if (r in range(75, 86) and g in range(140, 151) and b in range(250, 256)) or (
             r in range(120, 131) and g in range(210, 221) and b in range(250, 256)
         ):
             left, top, _w, _h = config["regions"]["minimap"]
-            states["moveToX"] = left + rel_x
-            states["moveToY"] = top + rel_y
-            logging.info(
-                "portal pixel x: {} y: {}, r: {} g: {} b: {}".format(
-                    states["moveToX"], states["moveToY"], r, g, b
-                )
-            )
-            return True
-    return False
+            coord = MinimapCoord(left + rel_x, top + rel_y)
+            logging.info("portal pixel {}, r: {} g: {} b: {}".format(coord, r, g, b))
+            return coord
+    return None
 
 
 def is_elite_mob(r, g, b):
     return r in range(200, 216) and g in range(125, 151) and b in range(30, 61)
 
 
-def checkFloor2Elite():
+def check_elite() -> Optional[MinimapCoord]:
     for r, g, b, rel_x, rel_y in spiral_search():
         if is_elite_mob(r, g, b):
             left, top, _w, _h = config["regions"]["minimap"]
-            states["moveToX"] = left + rel_x
-            states["moveToY"] = top + rel_y
+            coord = MinimapCoord(left + rel_x, top + rel_y)
             logging.info(
-                "elite x: {} y: {}, r: {} g: {} b: {}".format(
-                    states["moveToX"], states["moveToY"], r, g, b
+                "elite coord: {} r: {} g: {} b: {}".format(
+                    coord, r, g, b
                 )
             )
-            return True
-    return False
+            return coord
+    return None
 
 
 def is_red_mob(r, g, b):
     return r in range(200, 256) and g in range(10, 41) and b in range(10, 41)
 
 
-def check_red_mob() -> bool:
+def check_red_mob() -> Optional[MinimapCoord]:
     for r, g, b, rel_x, rel_y in spiral_search():
         if is_red_mob(r, g, b):
             left, top, _w, _h = config["regions"]["minimap"]
-            states["moveToX"] = left + rel_x
-            states["moveToY"] = top + rel_y
+            coord = MinimapCoord(left + rel_x, top + rel_y)
             logging.info(
-                "red mob x: {} y: {}, r: {} g: {} b: {}".format(
-                    states["moveToX"], states["moveToY"], r, g, b
+                "red mob coord: {} r: {} g: {} b: {}".format(
+                    coord, r, g, b
                 )
             )
-            return True
-    return False
+            return coord
+    return None
 
 
 def is_gold_mob(r, g, b):
@@ -773,19 +731,18 @@ def checkFloor3GoldMob():
     return False
 
 
-def checkFloor2Boss():
+def checkFloor2Boss() -> Optional[MinimapCoord]:
     fightFloor2Boss()
     bossLocation = client_util.locate_center_on_screen(
         "./screenshots/boss.png", confidence=0.65
     )
-    if bossLocation != None:
+    if bossLocation is not None:
         bossLocation = tuple(bossLocation)
         left, top = bossLocation
-        states["moveToX"] = left
-        states["moveToY"] = top
-        logging.info("boss x: {} y: {}".format(states["moveToX"], states["moveToY"]))
-        return True
-    return False
+        coord = MinimapCoord(left, top)
+        logging.info("boss {}".format(coord))
+        return coord
+    return None
 
 
 # def checkFloor2Boss():
@@ -819,7 +776,7 @@ def clickTower():
     riftCore2 = client_util.locate_center_on_screen(
         "./screenshots/riftcore2.png", confidence=0.6
     )
-    if riftCore1 != None:
+    if riftCore1 is not None:
         x, y = riftCore1
         if y > 650 or x < 400 or x > 1500:
             return
@@ -833,7 +790,7 @@ def clickTower():
         utils.press(config["meleeAttack"])
         sleep(900, 960)
         utils.press(config["meleeAttack"])
-    elif riftCore2 != None:
+    elif riftCore2 is not None:
         x, y = riftCore2
         if y > 650 or x < 400 or x > 1500:
             return
@@ -855,41 +812,41 @@ def is_tower_pixel(r, g, b):
             (r in range(125, 130) and g in range(95, 100) and b in range(100, 105)))
 
 
-def checkFloor3Tower(tower_result: SpiralResult):
+def checkFloor3Tower(tower_result: SpiralResult) -> Optional[MinimapCoord]:
     tower = client_util.locate_center_on_screen(
         "./screenshots/tower.png", region=config["regions"]["minimap"], confidence=0.7
     )
-    if tower != None:
+    if tower is not None:
         x, y = tower
-        states["moveToX"] = x
-        states["moveToY"] = y - 1
-        logging.info("tower image x: {} y: {}".format(states["moveToX"], states["moveToY"]))
-        return True
+        coord = MinimapCoord(x, y - 1)
+        logging.info("tower image {}".format(coord))
+        return coord
 
     if tower_result.found:
         left, top, _w, _h = config["regions"]["minimap"]
-        states["moveToX"] = left + tower_result.rel_x
-        states["moveToY"] = top + tower_result.rel_y
+        x = left + tower_result.rel_x
+        y = top + tower_result.rel_y
         # pos offset
         if tower_result.r in range(125, 130) and tower_result.g in range(95, 100) and tower_result.b in range(100, 105):
-            states["moveToY"] = states["moveToY"] + 7
+            y += 7
         elif tower_result.r in range(160, 165) and tower_result.g in range(160, 165) and tower_result.b in range(160, 165):
-            states["moveToY"] = states["moveToY"] - 13
+            y -= 13
+        coord = MinimapCoord(x, y)
         logging.info(
-            "tower pixel pos x: {} y: {}, r: {} g: {} b: {}".format(
-                states["moveToX"], states["moveToY"], tower_result.r, tower_result.g, tower_result.b
+            "tower pixel pos {}, r: {} g: {} b: {}".format(
+                coord, tower_result.r, tower_result.g, tower_result.b
             )
         )
-        return True
+        return coord
 
-    return False
+    return None
 
 
-def checkChaosFinish():
+def checkChaosFinish() -> bool:
     clearOk = client_util.locate_center_on_screen(
         "./screenshots/clearOk.png", confidence=0.75
     )
-    if clearOk != None:
+    if clearOk is not None:
         x, y = clearOk
         client_util.move_to(x=x, y=y)
         sleep(600, 800)
@@ -908,13 +865,13 @@ def fightFloor2Boss():
         utils.press(config["awakening"])
 
 
-def calculateMinimapRelative(x, y, dist=200):
+def convert_minimap_to_screen(minimap: MinimapCoord, dist: int = 200) -> ScreenCoord:
     selfLeft = config["minimapCenterX"]
     selfTop = config["minimapCenterY"]
+    x = minimap.x
+    y = minimap.y
     if abs(selfLeft - x) <= 3 and abs(selfTop - y) <= 3:
-        states["moveToX"] = config["screenCenterX"]
-        states["moveToY"] = config["screenCenterY"]
-        return
+        return ScreenCoord(config["screenCenterX"], config["screenCenterY"])
 
     x = x - selfLeft
     y = y - selfTop
@@ -928,19 +885,13 @@ def calculateMinimapRelative(x, y, dist=200):
             newY = y - abs(dist)
         else:
             newY = y + abs(dist)
-        # logging.info("relative to center pos newX: 0 newY: {}".format(int(newY)))
-        states["moveToX"] = 0 + config["screenCenterX"]
-        states["moveToY"] = int(newY) + config["screenCenterY"]
-        return
+        return ScreenCoord(0 + config["screenCenterX"], int(newY) + config["screenCenterY"])
     if y == 0:
         if x < 0:
             newX = x - abs(dist)
         else:
             newX = x + abs(dist)
-        # logging.info("relative to center pos newX: {} newY: 0".format(int(newX)))
-        states["moveToX"] = int(newX) + config["screenCenterX"]
-        states["moveToY"] = 0 + config["screenCenterY"]
-        return
+        return ScreenCoord(int(newX) + config["screenCenterX"], 0 + config["screenCenterY"])
 
     k = y / x
     # newX = x + dist
@@ -965,36 +916,26 @@ def calculateMinimapRelative(x, y, dist=200):
         else:
             newX = newX - delta
 
-    # logging.info(
-    #     "after confining relative to center pos newX: {} newY: {}".format(
-    #         int(newX), int(newY)
-    #     )
-    # )
-    states["moveToX"] = int(newX) + config["screenCenterX"]
-    states["moveToY"] = int(newY) + config["screenCenterY"]
-    return
+    return ScreenCoord(int(newX) + config["screenCenterX"], int(newY) + config["screenCenterY"])
 
 
-def moveToMinimapRelative(x, y, timeMin, timeMax, blink, char_config):
+def move_to_minimap_coord(minimap_coord: MinimapCoord, time_min: int, time_max: int, blink: bool, char_config: Dict):
+    screen_coord = convert_minimap_to_screen(minimap_coord)
+
+    x = screen_coord.x
+    y = screen_coord.y
     # move one step to direction
-    if (
-        states["moveToX"] == config["screenCenterX"]
-        and states["moveToY"] == config["screenCenterY"]
-    ):
+    if x == config["screenCenterX"] and y == config["screenCenterY"]:
         return
     logging.info("moving to pos x: {} y: {}".format(states["moveToX"], states["moveToY"]))
 
-    # count = 0
-    # turn = True
-    # deflect = 60
+    # moving in a straight line
+    client_util.click(x=x, y=y, button=config["move"])
+    sleep(int(time_min / 2), int(time_max / 2))
 
     # moving in a straight line
     client_util.click(x=x, y=y, button=config["move"])
-    sleep(int(timeMin / 2), int(timeMax / 2))
-
-    # moving in a straight line
-    client_util.click(x=x, y=y, button=config["move"])
-    sleep(int(timeMin / 2), int(timeMax / 2))
+    sleep(int(time_min / 2), int(time_max / 2))
     # sleep(timeMin, timeMax)
 
     # optional blink here
@@ -1002,56 +943,19 @@ def moveToMinimapRelative(x, y, timeMin, timeMax, blink, char_config):
         utils.press(config["blink"])
         sleep(100, 150)
 
-    return
 
-    # # snake moving
-    # while count < 3:
-    #     if x > 960 and y < 540:
-    #         if turn:
-    #             x = x - deflect* 2.5
-    #             y = y - deflect
-    #         else:
-    #             x = x + deflect* 2.5
-    #             y = y + deflect
-    #     elif x > 960 and y > 540:
-    #         if turn:
-    #             x = x + deflect* 2.5
-    #             y = y - deflect
-    #         else:
-    #             x = x - deflect * 2.5
-    #             y = y + deflect
-    #     elif x < 960 and y > 540:
-    #         if turn:
-    #             x = x + deflect* 2.5
-    #             y = y + deflect
-    #         else:
-    #             x = x - deflect* 2.5
-    #             y = y - deflect
-    #     elif x < 960 and y < 540:
-    #         if turn:
-    #             x = x - deflect* 2.5
-    #             y = y + deflect
-    #         else:
-    #             x = x + deflect* 2.5
-    #             y = y - deflect
-    #     mouse_util.mouse_down(x=x, y=y, button=config['move'])
-    #     sleep(math.floor(timeMin / 3), math.floor(timeMax / 3))
-    #     turn = not turn
-    #     count = count + 1
-
-
-def randomMove(minimap_x: Optional[int] = None, minimap_y: Optional[int] = None):
+def randomMove(minimap_coord: Optional[MinimapCoord] = None) -> None:
     from_x = config["screenCenterX"] - config["clickableAreaX"]
     to_x = config["screenCenterX"] + config["clickableAreaX"]
     from_y = config["screenCenterY"] - config["clickableAreaY"]
     to_y = config["screenCenterY"] + config["clickableAreaY"]
 
     x = random.randint(from_x, to_x)
-    if minimap_x and minimap_y:
+    if minimap_coord:
         # dont random move to same quadrant
-        if (x < config["screenCenterX"]) == (minimap_x < config["minimapCenterX"]):
+        if (x < config["screenCenterX"]) == (minimap_coord.x < config["minimapCenterX"]):
             # if both have same signs, make sure y's have different signs
-            if minimap_y < config["minimapCenterY"]:
+            if minimap_coord.y < config["minimapCenterY"]:
                 from_y = config["screenCenterY"]
             else:
                 to_y = config["screenCenterY"]
@@ -1068,10 +972,10 @@ def randomMove(minimap_x: Optional[int] = None, minimap_y: Optional[int] = None)
     # )
 
 
-def enterPortal():
+def enterPortal(portal_coord: ScreenCoord) -> None:
     # repeatedly move and press g until black screen
     sleep(1100, 1200)
-    logging.info("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+    logging.info("moving to portal {}".format(portal_coord))
     enterTime = int(time.time_ns() / 1000000)
     portal_try = enterTime
     while True:
@@ -1087,93 +991,22 @@ def enterPortal():
             return
         if nowTime - portal_try > 4500:
             logging.info('Trying to find portal again')
-            if checkPortal():
-                calculateMinimapRelative(
-                    states["moveToX"], states["moveToY"], dist=100)
-                logging.info("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
+            if portal_minimap_coord := checkPortal():
+                portal_coord = convert_minimap_to_screen(portal_minimap_coord, dist=100)
+                logging.info("moving to portal {}".format(portal_coord))
             portal_try = nowTime
 
-        if (states["moveToX"] == config["screenCenterX"] and
-                states["moveToY"] == config["screenCenterY"]):
+        if portal_coord.x == config["screenCenterX"] and portal_coord.y == config["screenCenterY"]:
             utils.press(config["interact"])
             sleep(100, 120)
         else:
             utils.press(config["interact"])
-            client_util.click(
-                x=states["moveToX"], y=states["moveToY"], button=config["move"]
-            )
+            client_util.click(x=portal_coord.x, y=portal_coord.y, button=config["move"])
             sleep(50, 60)
             utils.press(config["interact"])
-            client_util.click(
-                x=states["moveToX"], y=states["moveToY"], button=config["move"]
-            )
+            client_util.click(x=portal_coord.x, y=portal_coord.y, button=config["move"])
             sleep(50, 60)
             utils.press(config["interact"])
-
-
-# def enterPortal():
-#     # repeatedly move and press g until black screen
-#     logging.info("moving to portal x: {} y: {}".format(states["moveToX"], states["moveToY"]))
-#     turn = True
-#     deflect = 80
-#     while True:
-#         im = mouse_util.screenshot(region=(1652, 168, 240, 210))
-#         r, g, b = im.getpixel((1772 - 1652, 272 - 168))
-#         if r == 0 and g == 0 and b == 0:
-#             return
-
-#         x = states["moveToX"]
-#         y = states["moveToY"]
-#         if x > 960 and y < 540:
-#             if turn:
-#                 x = x - deflect * 2.5
-#                 y = y - deflect
-#             else:
-#                 x = x + deflect * 2.5
-#                 y = y + deflect
-#         elif x > 960 and y > 540:
-#             if turn:
-#                 x = x + deflect * 2.5
-#                 y = y - deflect
-#             else:
-#                 x = x - deflect * 2.5
-#                 y = y + deflect
-#         elif x < 960 and y > 540:
-#             if turn:
-#                 x = x + deflect * 2.5
-#                 y = y + deflect
-#             else:
-#                 x = x - deflect * 2.5
-#                 y = y - deflect
-#         elif x < 960 and y < 540:
-#             if turn:
-#                 x = x - deflect * 2.5
-#                 y = y + deflect
-#             else:
-#                 x = x + deflect * 2.5
-#                 y = y - deflect
-#         # logging.info('movex: {} movey: {} x:{} y: {} turn: {}'.format(states['moveToX'], states['moveToY'], x,y,turn))
-#         count = 0
-#         while count < 5:
-#             utils.press(config["interact"])
-#             im = mouse_util.screenshot(region=(1652, 168, 240, 210))
-#             r, g, b = im.getpixel((1772 - 1652, 272 - 168))
-#             if r == 0 and g == 0 and b == 0:
-#                 return
-
-#             if (
-#                 states["moveToX"] == config["screenCenterX"]
-#                 and states["moveToY"] == config["screenCenterY"]
-#             ):
-#                 utils.press(config["interact"])
-#                 sleep(100, 120)
-#             else:
-#                 mouse_util.click(x=x, y=y, button=config["move"])
-#                 sleep(50, 60)
-#                 utils.press(config["interact"])
-#                 count = count + 1
-#             turn = not turn
-#     return
 
 
 def waitForLoading():
@@ -1185,20 +1018,20 @@ def waitForLoading():
             confidence=0.7,
             region=config["regions"]["leaveMenu"],
         )
-        if leaveButton != None:
+        if leaveButton is not None:
             return
         sleep(150, 200)
         if checkTimeout():
             return
 
 
-def diedCheck(char_config: Dict):  # get information about wait a few second to revive
+def diedCheck():  # get information about wait a few second to revive
     if client_util.locate_on_screen(
         "./screenshots/died.png", grayscale=True, confidence=0.9
     ):
         states["deathCount"] = states["deathCount"] + 1
         sleep(5000, 5500)
-        while client_util.locate_on_screen("./screenshots/resReady.png", confidence=0.7) != None:
+        while client_util.locate_on_screen("./screenshots/resReady.png", confidence=0.7) is not None:
             client_util.move_to(1275, 454)
             sleep(600, 800)
             client_util.click(1275, 454, button="left")
@@ -1263,7 +1096,7 @@ def healthCheck(char_config: Dict):
             confidence=0.7,
             region=config["regions"]["leaveMenu"],
         )
-        if leaveButton == None:
+        if leaveButton is None:
             return
         utils.press(config["healthPot"])
         states["healthPotCount"] = states["healthPotCount"] + 1
