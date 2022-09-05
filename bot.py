@@ -553,14 +553,14 @@ def useAbilities(abilities: List[Ability],
             if (check_portal and
                 ability_index % 2 == 0 and
                 states["status"] in ("floor1", "floor2", "floor3") and
-                checkPortal()):
+                    (portal_coords := checkPortal())):
                 client_util.click(
                     x=config["screenCenterX"],
                     y=config["screenCenterY"],
                     button=config["move"],
                 )
                 sleep(100, 150)
-                return checkPortal()
+                return checkPortal() or portal_coords
 
             # click rift core
             if states["status"] == "floor3":
