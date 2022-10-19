@@ -67,11 +67,13 @@ def load_abilities(char_config: Dict) -> List[Ability]:
 
 def switch_to_char(char):
     logging.info(f'Switching to {char=}')
-    utils.press('ESC', 1500)
-    client_util.move_and_click(*coordinates.SWITCH_CHARACTERS, wait=1000)
-    client_util.move_and_click(*coordinates.CHARACTERS[char - 1], wait=1000)
-    client_util.move_and_click(*coordinates.CONNECT, wait=1000)
-    client_util.move_and_click(*coordinates.CONNECT_CONFIRM)
+    utils.press('ESC', 2500)
+    client_util.move_and_click(*coordinates.SWITCH_CHARACTERS, wait=4000)
+    client_util.move_and_click(*coordinates.CHARACTERS[char - 1], wait=2000)
+    client_util.move_and_click(*coordinates.CHARACTERS[char - 1], wait=2000)
+    client_util.move_and_click(*coordinates.CONNECT, wait=2000)
+    client_util.move_and_click(*coordinates.CONNECT, wait=2000)
+    client_util.move_and_click(*coordinates.CONNECT_CONFIRM, wait=2000)
     utils.sleep(30000)
     client_util.wait_loading_finish()
 
@@ -174,6 +176,7 @@ def infinite_chaos(char, limit: Optional[int] = None):
 
 
 def enterChaos():
+    logging.info('Entering chaos')
     rightClick = "right"
     if config["move"] == "right":
         rightClick = "left"
@@ -187,6 +190,7 @@ def enterChaos():
         client_util.wait_loading_finish()
         sleep(600, 800)
         while True:
+            logging.info('Pressing alt-q')
             utils.key_down("alt")
             sleep(600, 800)
             utils.press("q")
@@ -209,7 +213,7 @@ def enterChaos():
                 break
             else:
                 if checkTimeout():
-                    # quitChaos()
+                    logging.info('Entering chaos timeout')
                     return
                 client_util.move_to(886, 346)
                 sleep(600, 800)
@@ -324,6 +328,13 @@ def doFloor3Portal(abilities: List[Ability], char_config: Dict):
         states["purplePortalCount"] = states["purplePortalCount"] + 1
         utils.press(config["awakening"])
         portal_minimap_coord = useAbilities(abilities, char_config)
+
+        # bad run quit
+        if checkTimeout():
+            logging.info("special portal timeout")
+            quitChaos()
+            return
+
         logging.info("special portal cleared")
         portal_coord = convert_minimap_to_screen(portal_minimap_coord, dist=100)
         if not config["floor3"]:
@@ -336,6 +347,13 @@ def doFloor3Portal(abilities: List[Ability], char_config: Dict):
         logging.info("gold mob located")
         states["goldPortalCount"] = states["goldPortalCount"] + 1
         portal_minimap_coord = useAbilities(abilities, char_config)
+
+        # bad run quit
+        if checkTimeout():
+            logging.info("gold portal timeout")
+            quitChaos()
+            return
+
         logging.info("special portal cleared")
         portal_coord = convert_minimap_to_screen(portal_minimap_coord, dist=100)
         if not config["floor3"]:

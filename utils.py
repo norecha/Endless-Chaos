@@ -85,7 +85,7 @@ class ClientUtil:
                 sleep(500, 800)
                 break
             sleep(500, 800)
-        sleep(1000)
+        sleep(2000)
 
     def wait_and_click_ok(self):
         return self._wait_and_click('./screenshots/ok.png', 0.75)
