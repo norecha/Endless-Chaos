@@ -32,34 +32,35 @@
       "directional": false
     },
     {
-      "key": "f",
+      "key": "3",
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
       "cast": false,
       "castTime": null,
       "position": {
-        "left": 816,
-        "top": 869,
+        "left": 835,
+        "top": 907,
         "width": 15,
         "height": 15
       },
       "directional": false
     },
     {
-      "key": "r",
+      "key": "4",
       "abilityType": "normal",
-      "hold": false,
-      "holdTime": null,
-      "cast": true,
-      "castTime": 500,
+      "hold": true,
+      "holdTime": 3000,
+      "cast": false,
+      "castTime": null,
       "position": {
-        "left": 855,
-        "top": 869,
+        "left": 873,
+        "top": 907,
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false,
+      "image_path": "abilities/call_the_wind.png"
     },
     {
       "key": "1",
@@ -93,35 +94,34 @@
       "directional": true
     },
     {
-      "key": "3",
+      "key": "f",
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
       "cast": false,
       "castTime": null,
       "position": {
-        "left": 835,
-        "top": 907,
+        "left": 816,
+        "top": 869,
         "width": 15,
         "height": 15
       },
       "directional": false
     },
     {
-      "key": "4",
+      "key": "r",
       "abilityType": "normal",
-      "hold": true,
-      "holdTime": 3000,
-      "cast": false,
-      "castTime": null,
+      "hold": false,
+      "holdTime": null,
+      "cast": true,
+      "castTime": 500,
       "position": {
-        "left": 873,
-        "top": 907,
+        "left": 855,
+        "top": 869,
         "width": 15,
         "height": 15
       },
-      "directional": false,
-      "image_path": "abilities/call_the_wind.png"
+      "directional": true
     },
     {
       "key": "v",
