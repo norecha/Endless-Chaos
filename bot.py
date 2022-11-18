@@ -1193,11 +1193,27 @@ def checkTimeout():
     return False
 
 
-def test_ability(char: int, ability: int):
+def test_abilities(char: int):
     setup()
     char_config = load_config(char)
     abilities = load_abilities(char_config)
-    checkCDandCast(abilities[ability])
+    for ability in abilities:
+        checkCDandCast(ability)
+
+
+def save_ability_image(char: int, ability_key: str, ability_name: str):
+    setup()
+    char_config = load_config(char)
+    for ability_config in char_config['abilities']:
+        if ability_config['key'] != ability_key:
+            continue
+
+        left = ability_config['position']['left']
+        top = ability_config['position']['top']
+        width = ability_config['position']['width']
+        height = ability_config['position']['height']
+        image = client_util.screenshot(region=(left, top, width, height))
+        image.save(f'abilities/{ability_name}.png')
 
 
 def setup():

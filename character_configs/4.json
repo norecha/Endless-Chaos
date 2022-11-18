@@ -1,13 +1,13 @@
 {
-  "class": "Gunlancer",
+  "class": "Bard",
   "abilities": [
     {
       "key": "q",
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": false,
-      "castTime": null,
+      "cast": true,
+      "castTime": 1000,
       "position": {
         "left": 738,
         "top": 869,
@@ -19,8 +19,8 @@
     {
       "key": "e",
       "abilityType": "normal",
-      "hold": true,
-      "holdTime": 1600,
+      "hold": false,
+      "holdTime": null,
       "cast": false,
       "castTime": null,
       "position": {
@@ -37,7 +37,7 @@
       "hold": false,
       "holdTime": null,
       "cast": true,
-      "castTime": 500,
+      "castTime": 3000,
       "position": {
         "left": 816,
         "top": 869,
@@ -52,7 +52,7 @@
       "hold": false,
       "holdTime": null,
       "cast": true,
-      "castTime": 350,
+      "castTime": 1000,
       "position": {
         "left": 855,
         "top": 869,
@@ -66,8 +66,8 @@
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": true,
-      "castTime": 1500,
+      "cast": false,
+      "castTime": null,
       "position": {
         "left": 759,
         "top": 907,
@@ -96,15 +96,15 @@
       "abilityType": "normal",
       "hold": false,
       "holdTime": null,
-      "cast": true,
-      "castTime": 1500,
+      "cast": false,
+      "castTime": null,
       "position": {
         "left": 835,
         "top": 907,
         "width": 15,
         "height": 15
       },
-      "directional": true
+      "directional": false
     },
     {
       "key": "4",
@@ -119,7 +119,23 @@
         "width": 15,
         "height": 15
       },
-      "directional": false
+      "directional": true
+    },
+    {
+      "key": "z",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": false,
+      "castTime": null,
+      "position": {
+        "left": 900,
+        "top": 870,
+        "width": 10,
+        "height": 10
+      },
+      "directional": false,
+      "image_path": "abilities/serenade_of_courage.png"
     },
     {
       "key": "v",
