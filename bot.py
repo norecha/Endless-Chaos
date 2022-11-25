@@ -20,8 +20,8 @@ from config import config
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('limit', None, 'optional chaos limit per char', lower_bound=1)
-flags.DEFINE_integer('chars', 1, '# of chars for daily mode', lower_bound=1)
 flags.DEFINE_integer('starting_char', 1, 'starting char', lower_bound=1)
+flags.DEFINE_integer('ending_char', 6, 'ending char', lower_bound=1)
 flags.DEFINE_bool('shutdown', False, 'shutdown pc when done')
 flags.DEFINE_bool('kill', False, 'kill lostark when done')
 
@@ -78,10 +78,10 @@ def switch_to_char(char):
     client_util.wait_loading_finish()
 
 
-def daily(chars, starting_char, limit: Optional[int] = None):
+def daily(starting_char: int, ending_char: int, limit: Optional[int] = None) -> None:
     global states
     daily_states = []
-    for char in range(starting_char, starting_char + chars):
+    for char in range(starting_char, ending_char + 1):
         logging.info(f'Starting daily for {char=}')
         states = newStates.copy()
         # switch to char
@@ -564,8 +564,10 @@ def useAbilities(abilities: List[Ability],
 
         # cast sequence
         for ability_index, ability in enumerate(abilities):
-            diedCheck()
-            healthCheck(char_config)
+            if ability_index % 3 == 0:
+                diedCheck()
+            if ability_index % 2 == 0:
+                healthCheck(char_config)
 
             # check portal
             if (check_portal and
@@ -585,7 +587,7 @@ def useAbilities(abilities: List[Ability],
                 clickTower()
 
             # check high-priority mobs
-            if states["status"] == "floor2" and (boss := checkFloor2Boss()):
+            if states["status"] == "floor2" and ability_index % 3 == 0 and (boss := checkFloor2Boss()):
                 move_to_minimap_coord(boss, 950, 1050, True, char_config)
                 fightFloor2Boss()
             # floor3 checks take long time, don't do it after every ability
@@ -1226,7 +1228,7 @@ def setup():
 
 def main(_argv):
     setup()
-    daily(FLAGS.chars, FLAGS.starting_char, limit=FLAGS.limit)
+    daily(FLAGS.starting_char, FLAGS.ending_char, limit=FLAGS.limit)
     if FLAGS.shutdown:
         os.system('shutdown /s /t 10')
     elif FLAGS.kill:
