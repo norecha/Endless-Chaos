@@ -32,6 +32,36 @@
       "directional": true
     },
     {
+      "key": "3",
+      "abilityType": "normal",
+      "hold": true,
+      "holdTime": 2500,
+      "cast": false,
+      "castTime": null,
+      "position": {
+        "left": 835,
+        "top": 907,
+        "width": 15,
+        "height": 15
+      },
+      "directional": false
+    },
+    {
+      "key": "4",
+      "abilityType": "normal",
+      "hold": false,
+      "holdTime": null,
+      "cast": true,
+      "castTime": 1000,
+      "position": {
+        "left": 873,
+        "top": 907,
+        "width": 15,
+        "height": 15
+      },
+      "directional": false
+    },
+    {
       "key": "f",
       "abilityType": "normal",
       "hold": false,
@@ -90,36 +120,6 @@
         "height": 15
       },
       "directional": true
-    },
-    {
-      "key": "3",
-      "abilityType": "normal",
-      "hold": true,
-      "holdTime": 3000,
-      "cast": false,
-      "castTime": null,
-      "position": {
-        "left": 835,
-        "top": 907,
-        "width": 15,
-        "height": 15
-      },
-      "directional": false
-    },
-    {
-      "key": "4",
-      "abilityType": "normal",
-      "hold": false,
-      "holdTime": null,
-      "cast": true,
-      "castTime": 1000,
-      "position": {
-        "left": 873,
-        "top": 907,
-        "width": 15,
-        "height": 15
-      },
-      "directional": false
     },
     {
       "key": "v",
